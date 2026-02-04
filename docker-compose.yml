@@ -1,15 +1,23 @@
-version: '3.8'
 services:
   backend:
     build: ./backend
     restart: always
 
   nginx:
-    image: nginx:alpine
+    image: nginxinc/nginx-unprivileged:alpine
+    security_opt:
+      - no-new-privileges:true
     restart: always
     ports:
-      - "80:80"
+      - "80:8080"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - backend
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: always
+    command: tunnel --no-autoupdate run --token ${CF_TOKEN}
+    depends_on:
+      - nginx
