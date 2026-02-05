@@ -31,7 +31,7 @@ jobs:
 
       - name: Run Deploy Script on VPS
         run: |
-          ssh -T -o StrictHostKeyChecking=no ${{ secrets.VPS_USER }}@ssh-deploy.sumomomomomomomomo.horse << 'EOF'
+          ssh -vv -T ${{ secrets.VPS_USER }}@ssh-deploy.sumomomomomomomomo.horse << 'EOF'
             cd ~/sumomo-blog
             git pull origin main
             docker compose up -d --build
