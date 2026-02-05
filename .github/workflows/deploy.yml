@@ -1,0 +1,37 @@
+name: Deploy via Cloudflare Tunnel
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Install Cloudflared
+        run: |
+          wget -q https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64.deb
+          sudo dpkg -i cloudflared-linux-amd64.deb
+
+      - name: Setup SSH Config
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          cat <<EOF > ~/.ssh/config
+          Host ssh-deploy.sumomomomomomomomo.horse
+            ProxyCommand /usr/local/bin/cloudflared access ssh --id ${{ secrets.CF_CLIENT_ID }} --secret ${{ secrets.CF_CLIENT_SECRET }} --hostname %h
+            StrictHostKeyChecking no
+          EOF
+
+      - name: Run Deploy Script on VPS
+        run: |
+          ssh ${{ secrets.VPS_USER }}@ssh-deploy.sumomomomomomomomo.horse << 'EOF'
+            cd ~/sumomo-blog
+            git pull origin main
+            sudo docker compose up -d --build
+            sudo docker image prune -f
+          EOF
