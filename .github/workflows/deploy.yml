@@ -25,6 +25,8 @@ jobs:
           Host ssh-deploy.sumomomomomomomomo.horse
             ProxyCommand /usr/local/bin/cloudflared access ssh --id ${{ secrets.CF_CLIENT_ID }} --secret ${{ secrets.CF_CLIENT_SECRET }} --hostname %h
             StrictHostKeyChecking no
+            UserKnownHostsFile /dev/null
+            IPQoS none
           EOF
 
       - name: Run Deploy Script on VPS
