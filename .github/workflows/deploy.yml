@@ -1,4 +1,4 @@
-name: Deploy via Cloudflare Tunnel
+name: Deploy Pipeline
 
 on:
   push:
@@ -29,7 +29,7 @@ jobs:
             IPQoS none
           EOF
 
-      - name: Run Deploy Script on VPS
+      - name: Run Deploy Script on satono-diamond
         run: |
           ssh -vv -T ${{ secrets.VPS_USER }}@ssh-deploy.sumomomomomomomomo.horse << 'EOF'
             cd ~/sumomo-blog
