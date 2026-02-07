@@ -34,6 +34,6 @@ jobs:
           ssh -vv -T ${{ secrets.VPS_USER }}@ssh-deploy.sumomo.horse << 'EOF'
             cd ~/sumomo-blog
             git pull origin main
-            docker compose up -d --build --force-recreate
+            docker compose up -d --build --force-recreate app nginx
             docker image prune -f
           EOF
