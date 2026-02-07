@@ -22,7 +22,7 @@ jobs:
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           cat <<EOF > ~/.ssh/config
-          Host ssh-deploy.sumomomomomomomomo.horse
+          Host ssh-deploy.sumomo.horse
             ProxyCommand /usr/local/bin/cloudflared access ssh --id ${{ secrets.CF_CLIENT_ID }} --secret ${{ secrets.CF_CLIENT_SECRET }} --hostname %h
             StrictHostKeyChecking no
             UserKnownHostsFile /dev/null
@@ -31,7 +31,7 @@ jobs:
 
       - name: Run Deploy Script on satono-diamond
         run: |
-          ssh -vv -T ${{ secrets.VPS_USER }}@ssh-deploy.sumomomomomomomomo.horse << 'EOF'
+          ssh -vv -T ${{ secrets.VPS_USER }}@ssh-deploy.sumomo.horse << 'EOF'
             cd ~/sumomo-blog
             git pull origin main
             docker compose up -d --build
