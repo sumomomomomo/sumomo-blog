@@ -1,1 +1,1 @@
-https://sumomomomomomomomo.horse/
+https://sumomo.horse/
