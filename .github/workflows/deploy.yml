@@ -33,7 +33,9 @@ jobs:
         run: |
           ssh -vv -T ${{ secrets.VPS_USER }}@ssh-deploy.sumomo.horse << 'EOF'
             cd ~/sumomo-blog
-            git pull origin main
+            git fetch origin main
+            git reset ---hard origin/main
+            git clean -fd
             docker compose up -d --build --force-recreate app nginx
             docker image prune -f
           EOF
