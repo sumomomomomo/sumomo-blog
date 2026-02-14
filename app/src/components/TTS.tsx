@@ -11,7 +11,7 @@ interface TTSProps {
   apiUrl?: string;
 }
 
-const TTS = ({ apiUrl = "http://192.168.1.89:5000/voice" }: TTSProps) => {
+const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
