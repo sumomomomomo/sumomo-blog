@@ -18,7 +18,7 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
   const [status, setStatus] = useState<string>('');
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messageMaxLength = 250;
+  const messageMaxLength = 75;
 
   const DEFAULT_PARAMS = {
     model_id: 6,
