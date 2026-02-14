@@ -18,7 +18,7 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
   const [status, setStatus] = useState<string>('');
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const messageMaxLength = 75;
+  const messageMaxLength = 150;
 
   const DEFAULT_PARAMS = {
     model_id: 6,
@@ -40,9 +40,9 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
   }, [messages]);
 
   const handleGenerate = async () => {
-    const text = textInputRef.current?.value.trim();
+    var text = textInputRef.current?.value.trim();
     if (text && text.length > messageMaxLength) {
-      text.slice(0, messageMaxLength);
+      text = text.slice(0, messageMaxLength);
     }
     if (!text) {
       console.warn("Exit: No text found");
