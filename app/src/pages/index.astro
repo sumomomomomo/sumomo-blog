@@ -1,8 +1,12 @@
 ---
 import '../styles/global.css';
 
-const title = "Sumomo Horse";
-const cdnUrl = "https://cdn.sumomo.horse/misc/unsu-true.jpg";
+interface Props {
+  title?: string;
+  cdnUrl?: string;
+}
+
+const { title = "Sumomo Horse", cdnUrl = "https://cdn.sumomo.horse/misc/unsu-true.jpg" } = Astro.props;
 ---
 
 <html lang="en">

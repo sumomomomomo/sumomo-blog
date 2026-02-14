@@ -1,24 +1,37 @@
 ---
 import '../styles/global.css';
 
-const title = "About Me";
+interface Props {
+  title?: string;
+}
 
-const identity = {
+const { title = "About Me" } = Astro.props;
+
+interface Identity {
+  firstName: string;
+  country: string;
+  occupation: string;
+  hobbies: string[];
+}
+
+const identity: Identity = {
   firstName: "Not important",
   country: "Canada",
   occupation: "Technical Writer",
   hobbies: ["photography", "birdwatching", "baseball"],
 };
 
-const skills = ["HTML", "CSS", "JavaScript", "React", "Astro", "Writing Docs"];
+const skills: string[] = ["HTML", "CSS", "JavaScript", "React", "Astro", "Writing Docs"];
 
-const happy = true;
-const finished = false;
-const goal = 3;
+type TextCase = "uppercase" | "lowercase" | "capitalize";
 
-const skillColor = "crimson";
-const fontWeight = "bold";
-const textCase = "uppercase";
+const happy: boolean = true;
+const finished: boolean = false;
+const goal: number = 3;
+
+const skillColor: string = "crimson";
+const fontWeight: string = "bold";
+const textCase: TextCase = "uppercase";
 ---
 
 <html lang="en">

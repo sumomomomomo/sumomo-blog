@@ -10,3 +10,4 @@ node_modules/
 .terraform.lock.hcl
 
 .astro/
+dist/
