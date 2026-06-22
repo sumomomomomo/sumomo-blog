@@ -1,13 +1,14 @@
 ---
-import '../styles/global.css';
-import Nav from '../components/Nav.astro';
+import "../styles/global.css";
+import Nav from "../components/Nav.astro";
 
 interface Props {
   title?: string;
   cdnUrl?: string;
 }
 
-const { title = "Sumomo Horse", cdnUrl = "https://cdn.sumomo.horse/misc/unsu-true.jpg" } = Astro.props;
+const { title = "Sumomo Horse", cdnUrl = "https://cdn.sumomo.horse/misc/unsu-true.jpg" } =
+  Astro.props;
 ---
 
 <html lang="en">
