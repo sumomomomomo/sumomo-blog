@@ -1,6 +1,6 @@
 # Sumomo Blog
 
-A modern blog created with **Astro** (SSR), **Tailwind CSS**, and **Docker**. It features a "Zero Trust" infrastructure pipeline using Cloudflare Tunnels, R2 object storage, and a specialized Nginx reverse proxy for simultaneous HTTP and SSH stream forwarding.
+A modern blog created with **Astro** (Static Site Generation), **React**, and **Docker**. It features a "Zero Trust" infrastructure pipeline using Cloudflare Tunnels, R2 object storage, and a specialized Nginx reverse proxy for simultaneous HTTP and SSH stream forwarding.
 
 ## 🏗 Architecture
 
@@ -14,9 +14,9 @@ A modern blog created with **Astro** (SSR), **Tailwind CSS**, and **Docker**. It
 
 ### Technology Stack
 
-* **Frontend:** Astro (Server-Side Rendering mode)
-* **Adapter:** `@astrojs/node` (Standalone)
-* **Styling:** Tailwind CSS
+* **Frontend:** Astro (Static Site Generation)
+* **Client-side:** React (TTS component with `client:load`)
+* **Styling:** Custom CSS
 * **Ingress:** Cloudflare Tunnel (`cloudflared`)
 * **Proxy:** Nginx (Alpine Unprivileged) - Handles Layer 7 (Web) & Layer 4 (SSH)
 * **Storage:** Cloudflare R2 (S3-compatible) + Aggressive Edge Caching
@@ -47,7 +47,15 @@ npm install          # App - installs Astro + dependencies
 npm run dev
 # Access at http://192.168.1.13:3000
 
+# Test production-like build locally
+npm run build        # Builds static files to dist/
+npm run preview      # Serves static files (same as production)
+# Access at http://192.168.1.13:3000
 ```
+
+**Development vs Production:**
+- `npm run dev` — Runs Astro's dev server with hot-reload (requires Node.js)
+- `npm run build && npm run preview` — Tests the static build locally (matches production behavior)
 
 ### 2. Production Deployment (`satono-diamond`)
 
@@ -93,7 +101,7 @@ We use a custom `nginx.conf` to multiplex traffic based on the incoming port fro
 
 | Traffic Type | Port | Route | Config File |
 | --- | --- | --- | --- |
-| **HTTP (Web)** | `80` | Proxies to Astro App (`app:3000`) | `nginx/default.conf` |
+| **HTTP (Web)** | `80` | Proxies to Static App (`app:80`) | `nginx/default.conf` |
 | **SSH (Stream)** | `2222` | Forwards to `seiun-sky` (`192.168.1.11:22`) | `nginx/nginx.conf` |
 
 **Note on Permissions:**
@@ -128,8 +136,8 @@ The deployment script **explicitly excludes** the `tunnel` container from the re
 │   └── deploy.yml         # Production deployment
 ├── app/                   # Astro Application
 │   ├── src/               # Pages, Layouts, Components
-│   ├── astro.config.mjs   # Configured with { host: true }
-│   └── Dockerfile         # Node.js 24 build
+│   ├── astro.config.mjs   # Static output mode
+│   └── Dockerfile         # Multi-stage: Node.js build → Nginx serve
 ├── nginx/
 │   ├── default.conf       # HTTP Block (Web)
 │   └── nginx.conf         # Main Config + Stream Block (SSH)

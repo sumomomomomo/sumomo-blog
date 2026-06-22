@@ -1,12 +1,5 @@
 ---
-import "../styles/global.css";
-import Nav from "../components/Nav.astro";
-
-interface Props {
-  title?: string;
-}
-
-const { title = "About Me" } = Astro.props;
+import BaseLayout from "../layouts/BaseLayout.astro";
 
 interface Identity {
   firstName: string;
@@ -35,11 +28,8 @@ const fontWeight: string = "bold";
 const textCase: TextCase = "uppercase";
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<title>{title}</title>
+<BaseLayout title="About Me" activePage="/about/">
+    <slot name="head">
         <style define:vars={{skillColor, fontWeight, textCase}}>
             h1 {
                 color: purple;
@@ -51,9 +41,7 @@ const textCase: TextCase = "uppercase";
                 text-transform: var(--textCase);
             }
         </style>
-	</head>
-	<body>
-	       <Nav activePage="/about/" />
+    </slot>
 
 		<h1>About Me</h1>
         <h2>This is a h2 header</h2>
@@ -74,5 +62,4 @@ const textCase: TextCase = "uppercase";
         {finished && <p>I finished this tutorial!</p>}
 
         {goal === 3 ? <p>My goal is to finish in 3 days.</p> : <p>My goal is not 3 days.</p>}
-	</body>
-</html>
+</BaseLayout>

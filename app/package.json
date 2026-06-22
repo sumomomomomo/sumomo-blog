@@ -4,7 +4,7 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev --host",
-    "start": "node ./dist/server/entry.mjs",
+    "start": "astro preview",
     "build": "astro build",
     "preview": "astro preview",
     "typecheck": "astro check",
@@ -12,7 +12,6 @@
     "format": "biome check --write ."
   },
   "dependencies": {
-    "@astrojs/node": "^9.0.0",
     "@astrojs/react": "^4.4.2",
     "astro": "^5.2.0",
     "react": "^19.2.4",

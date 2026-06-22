@@ -1,11 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-
-interface Message {
-  id: string;
-  text: string;
-  audioUrl?: string;
-  timestamp: Date;
-}
+import type { Message } from "../types/tts";
 
 interface TTSProps {
   apiUrl?: string;
