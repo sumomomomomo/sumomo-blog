@@ -1,6 +1,26 @@
 html {
   background-color: #f1f5f9;
-  font-family: sans-serif;
+  font-family: Georgia, Cambria, "Times New Roman", Times, serif;
+  scroll-behavior: smooth;
+  overflow-y: scroll; /* Prevent layout shift when scrollbar appears/disappears */
+}
+
+/* Subtle scrollbar styling to minimize visual impact on short pages */
+html::-webkit-scrollbar {
+  width: 8px;
+}
+
+html::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+html::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+html::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
 }
 
 body {
@@ -8,14 +28,49 @@ body {
   width: 100%;
   max-width: 80ch;
   padding: 1rem;
-  line-height: 1.5;
+  line-height: 1.75;
+  color: #2c2c2c;
 }
 
 * {
   box-sizing: border-box;
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 #f1f5f9;
 }
 
 h1 {
   margin: 1rem 0;
   font-size: 2.5rem;
+  font-weight: 700;
+  color: #242424;
+}
+
+/* Navigation Bar */
+.nav-bar {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.nav-bar a {
+  color: #242424;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.nav-bar a:hover,
+.nav-bar a.active {
+  color: #1a8917;
+}
+
+@media (max-width: 768px) {
+  .nav-bar {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
 }

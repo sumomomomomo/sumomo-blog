@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useEffect, useRef, useState } from "react";
 
 interface Message {
   id: string;
@@ -15,7 +15,7 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>('');
+  const [status, setStatus] = useState<string>("");
   const textInputRef = useRef<HTMLTextAreaElement>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageMaxLength = 150;
@@ -32,7 +32,7 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
   };
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
@@ -64,14 +64,14 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
     // Clear input
     const textInput = textInputRef.current;
     if (textInput) {
-      textInput.value = '';
-      textInput.style.height = 'auto';
+      textInput.value = "";
+      textInput.style.height = "auto";
     }
 
     // Show loading state
     setIsLoading(true);
     setError(null);
-    setStatus('Generating audio...');
+    setStatus("Generating audio...");
 
     try {
       // Call TTS API
@@ -81,7 +81,7 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
         searchParams.append(key, String(value));
       });
       const response = await fetch(`${apiUrl}?${searchParams.toString()}`, {
-        method: 'GET',
+        method: "GET",
       });
 
       if (!response.ok) {
@@ -106,25 +106,24 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
         const audioElement = document.getElementById(`audio-${aiMessage.id}`) as HTMLAudioElement;
         if (audioElement) {
           audioElement.play().catch((err) => {
-            console.error('Autoplay blocked by browser:', err);
+            console.error("Autoplay blocked by browser:", err);
           });
         }
       }, 100); // A small delay ensures the element exists in the DOM
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to generate audio');
+      setError(err instanceof Error ? err.message : "Failed to generate audio");
     } finally {
       setIsLoading(false);
-      setStatus('');
+      setStatus("");
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleGenerate();
     }
   };
-
 
   return (
     <div className="tts-container">
@@ -134,12 +133,17 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
 
       <div className="tts-messages">
         {messages.map((msg) => (
-          <div key={msg.id} className={`message ${msg.audioUrl ? 'ai' : 'user'}`}>
+          <div key={msg.id} className={`message ${msg.audioUrl ? "ai" : "user"}`}>
             <div className="message-content">
               <div className="message-text">{msg.text}</div>
               {msg.audioUrl && (
                 <div className="message-audio">
-                  <audio id={`audio-${msg.id}`} controls className="audio-player" src={msg.audioUrl} />
+                  <audio
+                    id={`audio-${msg.id}`}
+                    controls
+                    className="audio-player"
+                    src={msg.audioUrl}
+                  />
                 </div>
               )}
             </div>
@@ -161,11 +165,12 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
             disabled={isLoading}
           />
           <button
-            className={`tts-button ${isLoading ? 'loading' : ''}`}
+            type="button"
+            className={`tts-button ${isLoading ? "loading" : ""}`}
             onClick={handleGenerate}
             disabled={isLoading}
           >
-            {isLoading ? '' : 'Generate'}
+            {isLoading ? "" : "Generate"}
           </button>
         </div>
         {error && <div className="tts-error">{error}</div>}

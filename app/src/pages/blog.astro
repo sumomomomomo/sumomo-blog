@@ -1,5 +1,6 @@
 ---
-import '../styles/global.css';
+import "../styles/global.css";
+import Nav from "../components/Nav.astro";
 
 interface Props {
   title?: string;
@@ -15,10 +16,7 @@ const { title = "Sumomo - Blog" } = Astro.props;
 		<title>{title}</title>
 	</head>
 	<body>
-        <a href="/">Home</a>
-        <a href="/about/">About</a>
-        <a href="/blog/">Blog</a>
-        <a href="/tts/">TTS</a>
+        <Nav activePage="/blog/" />
         
 		<h1>Blog would be here</h1>
         <ul>

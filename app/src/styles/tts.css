@@ -135,7 +135,7 @@
 }
 
 .tts-button.loading::after {
-  content: '';
+  content: "";
   position: absolute;
   width: 1rem;
   height: 1rem;
