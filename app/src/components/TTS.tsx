@@ -165,6 +165,7 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
             disabled={isLoading}
           />
           <button
+            type="button"
             className={`tts-button ${isLoading ? "loading" : ""}`}
             onClick={handleGenerate}
             disabled={isLoading}
