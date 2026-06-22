@@ -29,31 +29,41 @@ Examples:
 
 ### 2. Workflow Steps
 
-1. **Switch to main and ensure it's up to date:**
+1. **Stash any uncommitted changes (if on a different branch):**
+   ```bash
+   git stash
+   ```
+
+2. **Switch to main and ensure it's up to date:**
    ```bash
    git checkout main
    git pull origin main
    ```
 
-2. **Create a new branch with the appropriate prefix:**
+3. **Pop stashed changes (if you stashed in step 1):**
+   ```bash
+   git stash pop
+   ```
+
+4. **Create a new branch with the appropriate prefix:**
    ```bash
    git checkout -b <prefix>/<description>
    ```
 
-3. **Make the code changes**
+5. **Make the code changes**
 
-4. **Commit with a descriptive message:**
+6. **Commit with a descriptive message:**
    ```bash
    git add -A
    git commit -m "<prefix>: description of changes"
    ```
 
-5. **Push the branch:**
+7. **Push the branch:**
    ```bash
    git push -u origin <prefix>/<description>
    ```
 
-6. **Create a Pull Request targeting main:**
+8. **Create a Pull Request targeting main:**
    ```bash
    gh pr create --base main --head <prefix>/<description> --title "<Prefix>: description" --body "Description of changes and why"
    ```
