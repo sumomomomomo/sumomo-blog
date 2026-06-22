@@ -27,13 +27,8 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Setup Biome
-        uses: biomejs/setup-biome@v2
-        with:
-            version: latest
-
       - name: Run Biome
-        run: biome ci /src
+        run: npx biome ci ./src
 
       - name: Build
         run: npm run build
