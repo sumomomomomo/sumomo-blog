@@ -15,20 +15,25 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Setup Node.js
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: app/package-lock.json
 
       - name: Install dependencies
         run: npm ci
 
-      - name: Run linter
-        run: npx biome check src/
+      - name: Setup Biome
+        uses: biomejs/setup-biome@v2
+        with:
+            version: latest
+
+      - name: Run Biome
+        run: biome ci /src
 
       - name: Build
         run: npm run build
