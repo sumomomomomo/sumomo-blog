@@ -16,7 +16,7 @@ interface PostModule {
 }
 
 const posts = Object.values(
-  import.meta.glob('../posts/*.md', { eager: true })
+  import.meta.glob("../posts/*.md", { eager: true }),
 ) as unknown as PostModule[];
 ---
 
