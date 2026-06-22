@@ -24,7 +24,11 @@ jobs:
           cache: npm
           cache-dependency-path: app/package-lock.json
 
-      - name: Install dependencies
+      - name: Install root dependencies
+        working-directory: .
+        run: npm ci
+
+      - name: Install app dependencies
         run: npm ci
 
       - name: Run Biome
