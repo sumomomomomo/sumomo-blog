@@ -1,0 +1,14 @@
+---
+interface Props {
+  activePage?: string;
+}
+
+const { activePage = "" } = Astro.props;
+---
+
+<nav class="nav-bar">
+  <a href="/" class={activePage === "/" ? "active" : ""}>Home</a>
+  <a href="/about/" class={activePage === "/about/" ? "active" : ""}>About</a>
+  <a href="/blog/" class={activePage === "/blog/" ? "active" : ""}>Blog</a>
+  <a href="/tts/" class={activePage === "/tts/" ? "active" : ""}>TTS</a>
+</nav>
