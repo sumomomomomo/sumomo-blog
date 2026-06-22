@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import '../styles/tts.css';
+import Nav from '../components/Nav.astro';
 import TTS from '../components/TTS';
 
 interface Props {
@@ -17,12 +18,7 @@ const { title = "TTS - Text to Speech" } = Astro.props;
 		<title>{title}</title>
 	</head>
 	<body>
-        <nav>
-            <a href="/">Home</a>
-            <a href="/about/">About</a>
-            <a href="/blog/">Blog</a>
-            <a href="/tts/" class="active">TTS</a>
-        </nav>
+        <Nav activePage="/tts/" />
 
         <TTS client:load />
 	</body>

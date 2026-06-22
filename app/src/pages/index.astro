@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import Nav from '../components/Nav.astro';
 
 interface Props {
   title?: string;
@@ -16,10 +17,7 @@ const { title = "Sumomo Horse", cdnUrl = "https://cdn.sumomo.horse/misc/unsu-tru
 		<title>{title}</title>
 	</head>
 	<body>
-        <a href="/">Home</a>
-        <a href="/about/">About</a>
-        <a href="/blog/">Blog</a>
-        <a href="/tts/">TTS</a>
+        <Nav activePage="/" />
 
 		<h1>Under Construction (Astro Edition)</h1>
         <img src={cdnUrl} alt="Seiun Sky" width="256" height="256" />

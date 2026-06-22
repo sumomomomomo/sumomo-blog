@@ -23,3 +23,33 @@ h1 {
   font-weight: 700;
   color: #242424;
 }
+
+/* Navigation Bar */
+.nav-bar {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1rem;
+  background-color: #ffffff;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.nav-bar a {
+  color: #242424;
+  text-decoration: none;
+  font-size: 0.95rem;
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+
+.nav-bar a:hover,
+.nav-bar a.active {
+  color: #1a8917;
+}
+
+@media (max-width: 768px) {
+  .nav-bar {
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+}

@@ -1,6 +1,7 @@
 ---
 import '../styles/global.css';
 import '../styles/blog-post.css';
+import Nav from '../components/Nav.astro';
 
 interface Image {
   url: string;
@@ -26,12 +27,7 @@ const { title = "Sumomo - Blog Post" } = Astro.props;
     <title>{title}</title>
   </head>
   <body>
-    <nav class="nav-bar">
-      <a href="/">Home</a>
-      <a href="/about/">About</a>
-      <a href="/blog/">Blog</a>
-      <a href="/tts/">TTS</a>
-    </nav>
+    <Nav />
 
     <article class="blog-post">
       <header class="blog-post-header">
