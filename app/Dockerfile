@@ -13,16 +13,13 @@ COPY . .
 # build Astro - creates /dist (static output)
 RUN npm run build
 
-# Stage 2: Serve with Nginx
+# Stage 2: Serve static files with Nginx
 FROM nginx:alpine
 
 # Copy built static files to nginx html directory
 COPY --from=build /app/dist /usr/share/nginx/html
 
-# Copy nginx configuration from build context
-COPY --from=build /app/nginx.conf /etc/nginx/nginx.conf
-COPY --from=build /app/default.conf /etc/nginx/conf.d/default.conf
-
+# Use default nginx config (will be overridden by docker-compose volume mount)
 EXPOSE 80
 
 CMD ["nginx", "-g", "daemon off;"]
