@@ -15,9 +15,16 @@ interface PostModule {
   };
 }
 
-const posts = Object.values(
-  import.meta.glob("../posts/*.md", { eager: true }),
-) as unknown as PostModule[];
+const postsRaw = import.meta.glob("./posts/*.md", { eager: true });
+
+const posts: PostModule[] = Object.entries(postsRaw).map(([path, mod]) => {
+  const fileName = path.split("/").pop()?.replace(/\.md$/, "") ?? "";
+  const moduleData = mod as { metadata?: { title: string } };
+  return {
+    id: `posts/${fileName}`,
+    metadata: moduleData.metadata ?? { title: fileName },
+  };
+});
 ---
 
 <html lang="en">
