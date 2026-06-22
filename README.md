@@ -154,3 +154,39 @@ This project is deployed on a private, bare-metal infrastructure to demonstrate 
     * **LXC: `seiun-sky` (Utility)**
         * Accessible via SSH Stream forwarding through `satono-diamond`'s Nginx proxy.
 
+---
+
+## 🤝 Contributing
+
+### Code Style & Linting
+
+This project uses **Biome** for linting and formatting. A pre-commit hook is configured to automatically format code and run lint checks before each commit.
+
+**Before creating a PR:**
+
+1. **Install dependencies:**
+  ```bash
+  cd app
+  npm install
+  ```
+
+2. **Run the linter manually** (the pre-commit hook does this automatically):
+  ```bash
+  npm run lint      # Check for issues
+  npm run format    # Auto-fix formatting issues
+  ```
+
+3. **Ensure the build passes:**
+  ```bash
+  npm run build
+  ```
+
+### Automated Checks
+
+- **Pre-commit Hook:** Runs `biome check --write src/` automatically before each commit
+- **CI Workflow:** Runs linting and build checks on every PR to `main`
+
+### VSCode Setup
+
+The project includes `.vscode/settings.json` for automatic format-on-save. Install the [Biome VSCode extension](https://marketplace.visualstudio.com/items?itemName=biomejs.biome) for the best experience.
+
