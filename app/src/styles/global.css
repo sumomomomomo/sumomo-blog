@@ -1,6 +1,7 @@
 html {
   background-color: #f1f5f9;
-  font-family: sans-serif;
+  font-family: Georgia, Cambria, 'Times New Roman', Times, serif;
+  scroll-behavior: smooth;
 }
 
 body {
@@ -8,7 +9,8 @@ body {
   width: 100%;
   max-width: 80ch;
   padding: 1rem;
-  line-height: 1.5;
+  line-height: 1.75;
+  color: #2c2c2c;
 }
 
 * {
@@ -18,4 +20,6 @@ body {
 h1 {
   margin: 1rem 0;
   font-size: 2.5rem;
+  font-weight: 700;
+  color: #242424;
 }
