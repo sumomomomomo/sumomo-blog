@@ -9,8 +9,7 @@
     "preview": "astro preview",
     "typecheck": "astro check",
     "lint": "biome check .",
-    "format": "biome check --write .",
-    "prepare": "husky"
+    "format": "biome check --write ."
   },
   "dependencies": {
     "@astrojs/node": "^9.0.0",
@@ -26,7 +25,6 @@
     "@types/node": "^25.2.3",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
-    "husky": "^9.1.7",
     "typescript": "^5.9.3"
   }
 }
