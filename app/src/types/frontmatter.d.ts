@@ -13,7 +13,3 @@ interface Frontmatter {
   image?: Image;
   tags: string[];
 }
-
-declare namespace Astro {
-  interface Frontmatter extends Frontmatter {}
-}

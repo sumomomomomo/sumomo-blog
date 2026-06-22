@@ -40,7 +40,7 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
   }, [messages]);
 
   const handleGenerate = async () => {
-    var text = textInputRef.current?.value.trim();
+    let text = textInputRef.current?.value.trim();
     if (text && text.length > messageMaxLength) {
       text = text.slice(0, messageMaxLength);
     }

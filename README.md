@@ -27,7 +27,7 @@ A modern blog created with **Astro** (SSR), **Tailwind CSS**, and **Docker**. It
 
 ### Prerequisites
 
-* Node.js v20+
+* Node.js v24+
 * Docker & Docker Compose
 * **Rclone** (Required for syncing assets)
 
@@ -38,8 +38,10 @@ The development environment runs directly on the metal for speed, bypassing Dock
 ```bash
 # Clone & Install
 git clone https://github.com/sumomomomomo/sumomo-blog.git
-cd sumomo-blog/app
-npm install
+cd sumomo-blog
+npm install          # Root - installs Husky
+cd app
+npm install          # App - installs Astro + dependencies
 
 # Run Dev Server (Exposed to LAN)
 npm run dev
@@ -99,9 +101,11 @@ We use the `nginxinc/nginx-unprivileged:alpine` image. The `nginx.conf` is stric
 
 ### 2. CI/CD Pipeline (GitHub Actions)
 
-Deployments utilize a **Hard Reset Strategy** to prevent configuration drift.
+**CI Workflow (`ci.yml`):**
+Runs on every PR to `main`. Installs root and app dependencies, runs Biome linting, and builds the project to ensure code quality before merging.
 
-**Workflow (`deploy.yml`):**
+**Deploy Workflow (`deploy.yml`):**
+Deployments utilize a **Hard Reset Strategy** to prevent configuration drift.
 
 1. **Connect:** SSH into `satono-diamond` via Cloudflare Tunnel.
 2. **Reset:** `git reset --hard origin/main` (Destroys local changes).
@@ -115,17 +119,22 @@ The deployment script **explicitly excludes** the `tunnel` container from the re
 
 ```text
 .
+├── package.json           # Root - Husky setup
+├── package-lock.json      # Root lock file
+├── .husky/
+│   └── pre-commit         # Auto-format on commit
 ├── .github/workflows/
-│   └── deploy.yml       # CI/CD Pipeline (Cloudflare SSH)
-├── app/                 # Astro Application
-│   ├── src/             # Pages, Layouts, Components
-│   ├── astro.config.mjs # Configured with { host: true }
-│   └── Dockerfile       # Multi-stage Node.js build
+│   ├── ci.yml             # CI checks (lint + build)
+│   └── deploy.yml         # Production deployment
+├── app/                   # Astro Application
+│   ├── src/               # Pages, Layouts, Components
+│   ├── astro.config.mjs   # Configured with { host: true }
+│   └── Dockerfile         # Node.js 24 build
 ├── nginx/
-│   ├── default.conf     # HTTP Block (Web)
-│   └── nginx.conf       # Main Config + Stream Block (SSH)
-├── docker-compose.yml   # Orchestration
-└── README.md            # Documentation
+│   ├── default.conf       # HTTP Block (Web)
+│   └── nginx.conf         # Main Config + Stream Block (SSH)
+├── docker-compose.yml     # Orchestration
+└── README.md              # Documentation
 
 ```
 
@@ -166,9 +175,12 @@ This project uses **Biome** for linting and formatting. A pre-commit hook is con
 
 1. **Install dependencies:**
   ```bash
+  npm install          # Root - installs Husky
   cd app
-  npm install
+  npm install          # App - installs Astro + dependencies
   ```
+
+> **Note:** After cloning, run `npm install` at the project root to activate Husky pre-commit hooks. The hook runs `biome check --write src/` in the `app/` directory before each commit.
 
 2. **Run the linter manually** (the pre-commit hook does this automatically):
   ```bash
@@ -183,8 +195,8 @@ This project uses **Biome** for linting and formatting. A pre-commit hook is con
 
 ### Automated Checks
 
-- **Pre-commit Hook:** Runs `biome check --write src/` automatically before each commit
-- **CI Workflow:** Runs linting and build checks on every PR to `main`
+- **Pre-commit Hook:** Runs `biome check --write src/` in the `app/` directory automatically before each commit (requires root `npm install` to activate)
+- **CI Workflow (`ci.yml`):** Runs linting and build checks on every PR to `main`
 
 ### VSCode Setup
 
