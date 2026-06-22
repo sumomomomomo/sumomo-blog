@@ -1,7 +1,6 @@
 ---
-import "../styles/global.css";
+import BaseLayout from "./BaseLayout.astro";
 import "../styles/blog-post.css";
-import Nav from "../components/Nav.astro";
 
 interface Image {
   url: string;
@@ -20,15 +19,7 @@ interface Props {
 const { title = "Sumomo - Blog Post" } = Astro.props;
 ---
 
-<html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>{title}</title>
-  </head>
-  <body>
-    <Nav />
-
+<BaseLayout title={title}>
     <article class="blog-post">
       <header class="blog-post-header">
         <h1 class="blog-post-title">{Astro.props.title}</h1>
@@ -62,5 +53,4 @@ const { title = "Sumomo - Blog Post" } = Astro.props;
         </footer>
       )}
     </article>
-  </body>
-</html>
+</BaseLayout>

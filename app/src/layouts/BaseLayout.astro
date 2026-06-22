@@ -1,0 +1,24 @@
+---
+import "../styles/global.css";
+import Nav from "../components/Nav.astro";
+
+interface Props {
+  title: string;
+  activePage?: string;
+}
+
+const { title, activePage = "" } = Astro.props;
+---
+
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<meta name="viewport" content="width=device-width" />
+		<title>{title}</title>
+		<slot name="head" />
+	</head>
+	<body>
+		<Nav activePage={activePage} />
+		<slot />
+	</body>
+</html>
