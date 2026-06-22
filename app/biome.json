@@ -63,16 +63,13 @@
                     "correctness": {
                         "noUnusedVariables": "off",
                         "noUnusedImports": "off"
-                    },
-                    "a11y": {
-                        "useMediaCaption": "off"
                     }
                 }
             }
         },
         {
             "includes": [
-                "components/TTS.tsx"
+                "src/components/TTS.tsx"
             ],
             "linter": {
                 "rules": {
