@@ -19,7 +19,7 @@ interface Props {
 const { title = "Sumomo - Blog Post" } = Astro.props;
 ---
 
-<BaseLayout title={title}>
+<BaseLayout title={title} activePage="/blog/">
     <article class="blog-post">
       <header class="blog-post-header">
         <h1 class="blog-post-title">{Astro.props.title}</h1>
