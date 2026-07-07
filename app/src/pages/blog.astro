@@ -5,26 +5,78 @@ interface PostModule {
   id: string;
   metadata: {
     title: string;
+    description?: string;
+    author?: string;
+    pubDate?: string;
+    image?: { url: string; alt: string };
+    tags?: string[];
   };
 }
 
 const postsRaw = import.meta.glob("./posts/*.md", { eager: true });
 
-const posts: PostModule[] = Object.entries(postsRaw).map(([path, mod]) => {
-  const fileName = path.split("/").pop()?.replace(/\.md$/, "") ?? "";
-  const moduleData = mod as { metadata?: { title: string } };
-  return {
-    id: `posts/${fileName}`,
-    metadata: moduleData.metadata ?? { title: fileName },
-  };
-});
+const posts: PostModule[] = Object.entries(postsRaw)
+  .map(([path, mod]) => {
+    const fileName = path.split("/").pop()?.replace(/\.md$/, "") ?? "";
+    const moduleData = mod as any;
+    const fm = moduleData.frontmatter ?? moduleData.metadata ?? {};
+    return {
+      id: `posts/${fileName}`,
+      metadata: {
+        title: fm.title ?? fileName,
+        description: fm.description ?? "",
+        author: fm.author ?? "",
+        pubDate: fm.pubDate ?? "",
+        image: fm.image,
+        tags: fm.tags ?? [],
+      },
+    };
+  })
+  .sort((a, b) => {
+    const dateA = a.metadata.pubDate ? new Date(a.metadata.pubDate).getTime() : 0;
+    const dateB = b.metadata.pubDate ? new Date(b.metadata.pubDate).getTime() : 0;
+    return dateB - dateA;
+  });
 ---
 
 <BaseLayout title="Sumomo - Blog" activePage="/blog/">
 	<h1>Blog</h1>
-        <ul>
-            {posts.map((post) => (
-                <li><a href={`/${post.id}`}>{post.metadata.title}</a></li>
-            ))}
-        </ul>
+	<div class="blog-grid">
+		{posts.map((post) => (
+			<a href={`/${post.id}`} class="blog-card">
+				{post.metadata.image && (
+					<div class="blog-card-image">
+						<img src={post.metadata.image.url} alt={post.metadata.image.alt} loading="lazy" />
+					</div>
+				)}
+				<div class="blog-card-content">
+					<h2 class="blog-card-title">{post.metadata.title}</h2>
+					{post.metadata.description && (
+						<p class="blog-card-description">{post.metadata.description}</p>
+					)}
+					<div class="blog-card-meta">
+						{post.metadata.author && (
+							<span class="blog-card-author">{post.metadata.author}</span>
+						)}
+						{post.metadata.pubDate && (
+							<span class="blog-card-date">
+								{new Date(post.metadata.pubDate).toLocaleDateString('en-US', {
+									year: 'numeric',
+									month: 'long',
+									day: 'numeric'
+								})}
+							</span>
+						)}
+					</div>
+					{post.metadata.tags && post.metadata.tags.length > 0 && (
+						<div class="blog-card-tags">
+							{post.metadata.tags.map((tag: string) => (
+								<span class="blog-card-tag">{tag}</span>
+							))}
+						</div>
+					)}
+				</div>
+			</a>
+		))}
+	</div>
 </BaseLayout>
