@@ -16,7 +16,7 @@ A modern blog created with **Astro** (Static Site Generation), **React**, and **
 
 * **Frontend:** Astro (Static Site Generation)
 * **Client-side:** React (TTS component with `client:load`)
-* **Styling:** Custom CSS
+* **Styling:** Tailwind CSS v4 (inline utility classes with dark mode support)
 * **Ingress:** Cloudflare Tunnel (`cloudflared`)
 * **Proxy:** Nginx (Alpine Unprivileged) - Handles Layer 7 (Web) & Layer 4 (SSH)
 * **Storage:** Cloudflare R2 (S3-compatible) + Aggressive Edge Caching

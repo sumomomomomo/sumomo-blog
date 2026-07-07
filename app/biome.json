@@ -1,83 +1,91 @@
 {
-    "$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
-    "vcs": {
-        "enabled": true,
-        "clientKind": "git"
-    },
-    "files": {
-        "includes": [
-            "**/*.astro",
-            "**/*.ts",
-            "**/*.tsx",
-            "**/*.js",
-            "**/*.jsx",
-            "**/*.css",
-            "**/*.json",
-            "**/*.md"
-        ],
-        "ignoreUnknown": true
+  "$schema": "https://biomejs.dev/schemas/2.5.0/schema.json",
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git"
+  },
+  "files": {
+    "includes": [
+      "**/*.astro",
+      "**/*.ts",
+      "**/*.tsx",
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.css",
+      "**/*.json",
+      "**/*.md"
+    ],
+    "ignoreUnknown": true
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 100
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "preset": "recommended",
+      "correctness": {
+        "useExhaustiveDependencies": "off"
+      },
+      "style": {
+        "noNonNullAssertion": "off"
+      },
+      "suspicious": {
+        "noExplicitAny": "warn"
+      }
+    }
+  },
+  "css": {
+    "linter": {
+      "enabled": true
     },
     "formatter": {
-        "enabled": true,
-        "indentStyle": "space",
-        "indentWidth": 2,
-        "lineWidth": 100
+      "enabled": true,
+      "indentStyle": "space",
+      "indentWidth": 2
     },
-    "linter": {
-        "enabled": true,
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "json": {
+    "parser": {
+      "allowComments": true
+    }
+  },
+  "overrides": [
+    {
+      "includes": ["**/*.astro"],
+      "linter": {
         "rules": {
-            "preset": "recommended",
-            "correctness": {
-                "useExhaustiveDependencies": "off"
-            },
-            "style": {
-                "noNonNullAssertion": "off"
-            },
-            "suspicious": {
-                "noExplicitAny": "warn"
-            }
+          "correctness": {
+            "noUnusedVariables": "off",
+            "noUnusedImports": "off"
+          }
         }
+      }
     },
-    "css": {
-        "linter": {
-            "enabled": true
-        },
-        "formatter": {
-            "enabled": true,
-            "indentStyle": "space",
-            "indentWidth": 2
+    {
+      "includes": ["src/components/TTS.tsx"],
+      "linter": {
+        "rules": {
+          "a11y": {
+            "useMediaCaption": "off"
+          }
         }
+      }
     },
-    "json": {
-        "parser": {
-            "allowComments": true
-        }
-    },
-    "overrides": [
-        {
-            "includes": [
-                "**/*.astro"
-            ],
-            "linter": {
-                "rules": {
-                    "correctness": {
-                        "noUnusedVariables": "off",
-                        "noUnusedImports": "off"
-                    }
-                }
-            }
-        },
-        {
-            "includes": [
-                "src/components/TTS.tsx"
-            ],
-            "linter": {
-                "rules": {
-                    "a11y": {
-                        "useMediaCaption": "off"
-                    }
-                }
-            }
-        }
-    ]
+    {
+      "includes": ["**/dist/**", "**/.astro/**"],
+      "formatter": {
+        "enabled": false
+      },
+      "linter": {
+        "enabled": false
+      }
+    }
+  ]
 }

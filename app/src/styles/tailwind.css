@@ -1,0 +1,71 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* Make dark:* utilities respond to <html data-theme="dark"> */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
+  --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  --animate-spin-slow: spin 0.8s linear infinite;
+}
+
+@layer base {
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+}
+
+@layer components {
+  .sun-icon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+
+  .moon-icon {
+    opacity: 0;
+    transform: rotate(-180deg) scale(0);
+  }
+
+  [data-theme="dark"] .sun-icon {
+    opacity: 0;
+    transform: rotate(180deg) scale(0);
+  }
+
+  [data-theme="dark"] .moon-icon {
+    opacity: 1;
+    transform: rotate(0deg) scale(1);
+  }
+
+  .theme-ready .theme-icon {
+    transition:
+      opacity 0.3s ease,
+      transform 0.3s ease;
+  }
+
+  .loading-spinner {
+    position: relative;
+  }
+
+  .loading-spinner::after {
+    content: "";
+    position: absolute;
+    width: 1rem;
+    height: 1rem;
+    top: 50%;
+    left: 50%;
+    margin: -0.5rem 0 0 -0.5rem;
+    border: 2px solid white;
+    border-top-color: transparent;
+    border-radius: 50%;
+    animation: var(--animate-spin-slow);
+  }
+
+  @media (max-width: 768px) {
+    .nav-responsive {
+      @apply flex-wrap gap-4;
+    }
+  }
+}
