@@ -4,7 +4,6 @@
 /* Theme-based dark mode using [data-theme="dark"] */
 @custom-variant dark (&:is([data-theme="dark"] &));
 
-/* Custom theme values to match original design */
 @theme {
   --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
   --font-mono: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
@@ -15,19 +14,6 @@
 }
 
 @layer base {
-  /* Base styles */
-  html {
-    scroll-behavior: smooth;
-    overflow-y: scroll;
-  }
-
-  html.theme-ready {
-    transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
-  }
-
-  /* Custom scrollbar using CSS custom properties for theme support */
   :root {
     --scrollbar-track: #f1f5f9;
     --scrollbar-thumb: #cbd5e1;
@@ -38,6 +24,25 @@
     --scrollbar-track: #1e293b;
     --scrollbar-thumb: #475569;
     --scrollbar-thumb-hover: #64748b;
+  }
+
+  *,
+  *::before,
+  *::after {
+    box-sizing: border-box;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    overflow-y: scroll;
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  }
+
+  html.theme-ready body {
+    transition:
+      background-color 0.3s ease,
+      color 0.3s ease;
   }
 
   html::-webkit-scrollbar {
@@ -58,28 +63,11 @@
   }
 
   body {
-    @apply mx-auto w-full max-w-80ch p-4 leading-relaxed bg-gray-100 text-stone-800;
-  }
-
-  [data-theme="dark"] body {
-    @apply bg-slate-900 text-slate-200;
-  }
-
-  html.theme-ready body {
-    transition:
-      background-color 0.3s ease,
-      color 0.3s ease;
-  }
-
-  * {
-    box-sizing: border-box;
-    scrollbar-width: thin;
-    scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+    @apply mx-auto w-full max-w-80ch p-4 leading-relaxed bg-gray-100 text-stone-800 dark:bg-slate-900 dark:text-slate-200;
   }
 }
 
 @layer components {
-  /* Theme icon animations */
   .sun-icon {
     opacity: 1;
     transform: rotate(0deg) scale(1);
@@ -106,7 +94,10 @@
       transform 0.3s ease;
   }
 
-  /* Loading spinner for TTS button */
+  .loading-spinner {
+    position: relative;
+  }
+
   .loading-spinner::after {
     content: "";
     position: absolute;
@@ -118,14 +109,12 @@
     border: 2px solid white;
     border-top-color: transparent;
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+    animation: var(--animate-spin-slow);
   }
 
-  /* Responsive nav */
   @media (max-width: 768px) {
     .nav-responsive {
       @apply flex-wrap gap-4;
     }
   }
-
 }
