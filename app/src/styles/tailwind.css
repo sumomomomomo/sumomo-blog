@@ -2,7 +2,7 @@
 @plugin "@tailwindcss/typography";
 
 /* Make dark:* utilities respond to <html data-theme="dark"> */
-@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 @theme {
   --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
