@@ -1,7 +1,7 @@
 @import "tailwindcss";
 
 /* Theme-based dark mode using [data-theme="dark"] */
-@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+@custom-variant dark (&:is([data-theme="dark"] &));
 
 /* Custom theme values to match original design */
 @theme {
@@ -81,6 +81,12 @@ body {
   max-width: 80ch;
   padding: 1rem;
   line-height: 1.75;
+  @apply bg-gray-100 text-stone-800;
+}
+
+body[data-theme="dark"],
+[data-theme="dark"] body {
+  @apply bg-slate-900 text-slate-200;
 }
 
 body.theme-ready {
@@ -97,6 +103,40 @@ body.theme-ready {
 
 [data-theme="dark"] * {
   scrollbar-color: #475569 #1e293b;
+}
+
+/* Global element styles with theme support */
+h1 {
+  @apply text-2xl font-bold text-stone-800 dark:text-slate-100 my-4;
+}
+
+h2 {
+  @apply text-xl font-bold text-stone-800 dark:text-slate-100 my-4;
+}
+
+h3 {
+  @apply text-lg font-semibold text-stone-800 dark:text-slate-100 my-3;
+}
+
+p {
+  @apply text-stone-700 dark:text-slate-300 my-4;
+}
+
+ul, ol {
+  @apply text-stone-700 dark:text-slate-300 my-4 pl-8;
+}
+
+li {
+  @apply text-stone-700 dark:text-slate-300 my-1;
+}
+
+a {
+  @apply text-green-700 dark:text-green-400 underline;
+  text-underline-offset: 2px;
+}
+
+a:hover {
+  @apply text-green-800 dark:text-green-500;
 }
 
 /* Theme icon animations */
