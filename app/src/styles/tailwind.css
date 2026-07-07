@@ -122,7 +122,8 @@ p {
   @apply text-stone-700 dark:text-slate-300 my-4;
 }
 
-ul, ol {
+ul,
+ol {
   @apply text-stone-700 dark:text-slate-300 my-4 pl-8;
 }
 
