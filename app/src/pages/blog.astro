@@ -41,8 +41,10 @@ posts.sort((a, b) => {
 ---
 
 <BaseLayout title="Sumomo - Blog" activePage="/blog/">
-	<h1 class="my-4 text-2xl font-bold text-stone-800 dark:text-slate-100 transition-colors duration-300">Blog</h1>
-	<div class="grid gap-8 mt-8 grid-cols-1 md:grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
+	<div style="width: 100vw; margin-left: calc(-50vw + 50%);">
+		<div class="max-w-[900px] mx-auto px-4 sm:px-8">
+			<h1 class="my-4 text-2xl font-bold text-stone-800 dark:text-slate-100 transition-colors duration-300">Blog</h1>
+			<div class="grid gap-8 mt-8 grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
 		{posts.map((post) => (
 			<a href={`/${post.id}`} class="flex flex-col bg-white dark:bg-slate-800 rounded-xl shadow-md no-underline text-inherit overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-[transform,box-shadow,background-color] duration-300">
 				{post.metadata.image && (
@@ -79,5 +81,7 @@ posts.sort((a, b) => {
 				</div>
 			</a>
 		))}
+		</div>
 	</div>
+</div>
 </BaseLayout>
