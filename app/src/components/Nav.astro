@@ -7,11 +7,11 @@ const { activePage = "" } = Astro.props;
 ---
 
 <nav class="nav-bar">
-  <a href="/" class={activePage === "/" ? "active" : ""}>Home</a>
-  <a href="/about/" class={activePage === "/about/" ? "active" : ""}>About</a>
-  <a href="/blog/" class={activePage === "/blog/" ? "active" : ""}>Blog</a>
-  <a href="/tts/" class={activePage === "/tts/" ? "active" : ""}>TTS</a>
-  <button id="theme-toggle" class="theme-toggle" aria-label="Toggle dark mode">
+  <a class="center" href="/" class={activePage === "/" ? "active" : ""}>Home</a>
+  <a class="center" href="/about/" class={activePage === "/about/" ? "active" : ""}>About</a>
+  <a class="center" href="/blog/" class={activePage === "/blog/" ? "active" : ""}>Blog</a>
+  <a class="center" href="/tts/" class={activePage === "/tts/" ? "active" : ""}>TTS</a>
+  <button id="theme-toggle" class="theme-toggle right" aria-label="Toggle dark mode">
     <!-- Sun Icon -->
     <svg class="theme-icon sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="5"/>

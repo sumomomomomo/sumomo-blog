@@ -123,6 +123,7 @@ h1.theme-ready {
 
 /* Navigation Bar */
 .nav-bar {
+  position: relative;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -152,6 +153,16 @@ h1.theme-ready {
 .nav-bar a:hover,
 .nav-bar a.active {
   color: var(--nav-link-hover);
+}
+
+.nav-bar .center {
+  text-align: center;
+  display: flex;
+}
+
+.nav-bar .right {
+  position: absolute;
+  right: 0;
 }
 
 /* Theme Toggle Button */
