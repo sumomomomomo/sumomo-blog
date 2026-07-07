@@ -89,7 +89,7 @@ body[data-theme="dark"],
   @apply bg-slate-900 text-slate-200;
 }
 
-body.theme-ready {
+html.theme-ready body {
   transition:
     background-color 0.3s ease,
     color 0.3s ease;
