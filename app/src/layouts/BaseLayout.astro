@@ -10,25 +10,26 @@ interface Props {
 const { title, activePage = "" } = Astro.props;
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<title>{title}</title>
-		<script is:inline>
-			(function() {
-				var theme = localStorage.getItem('theme');
-				if (!theme) {
-					theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-				}
-				document.documentElement.setAttribute('data-theme', theme);
-				document.documentElement.classList.add('theme-ready');
-			})();
-		</script>
-		<slot name="head" />
-	</head>
-	<body>
-		<Nav activePage={activePage} />
-		<slot />
-	</body>
+<html lang="en" class="scroll-smooth overflow-y-scroll">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>{title}</title>
+    <script is:inline>
+      (function() {
+        var theme = localStorage.getItem('theme');
+        if (!theme) {
+          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
+        document.documentElement.classList.add('theme-ready');
+      })();
+    </script>
+    <slot name="head" />
+  </head>
+
+  <body class="mx-auto w-full max-w-[80ch] p-4 leading-relaxed bg-gray-100 text-stone-800 dark:bg-slate-900 dark:text-slate-200 transition-colors duration-300">
+    <Nav activePage={activePage} />
+    <slot />
+  </body>
 </html>
