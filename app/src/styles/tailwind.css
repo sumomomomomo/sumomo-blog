@@ -106,29 +106,30 @@ html.theme-ready body {
 }
 
 /* Global element styles with theme support */
+/* Note: color classes removed from global selectors to allow inline classes to take precedence */
 h1 {
-  @apply text-2xl font-bold text-stone-800 dark:text-slate-100 my-4;
+  @apply text-2xl font-bold my-4;
 }
 
 h2 {
-  @apply text-xl font-bold text-stone-800 dark:text-slate-100 my-4;
+  @apply text-xl font-bold my-4;
 }
 
 h3 {
-  @apply text-lg font-semibold text-stone-800 dark:text-slate-100 my-3;
+  @apply text-lg font-semibold my-3;
 }
 
 p {
-  @apply text-stone-700 dark:text-slate-300 my-4;
+  @apply my-4;
 }
 
 ul,
 ol {
-  @apply text-stone-700 dark:text-slate-300 my-4 pl-8;
+  @apply my-4 pl-8;
 }
 
 li {
-  @apply text-stone-700 dark:text-slate-300 my-1;
+  @apply my-1;
 }
 
 a {
