@@ -31,7 +31,7 @@ const { activePage = "" } = Astro.props;
   </button>
 </nav>
 
-<script>
+<script is:inline>
   // Theme initialization is handled by BaseLayout inline script to prevent FOUC.
   // This script only handles the toggle button click and system preference changes.
 
