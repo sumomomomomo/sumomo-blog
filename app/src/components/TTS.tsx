@@ -120,21 +120,32 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
   };
 
   return (
-    <div className="tts-container">
-      <header className="tts-header">
-        <h1>Text to Speech</h1>
+    <div className="max-w-3xl mx-auto p-4 flex flex-col sm:h-[calc(100vh-60px)] h-[calc(100vh-80px)]">
+      <header className="text-center py-4 border-b border-stone-200 dark:border-slate-700 mb-4 transition-[border-color] duration-300">
+        <h1 className="m-0 text-xl text-stone-800 dark:text-slate-100 transition-colors duration-300">
+          Text to Speech
+        </h1>
       </header>
-      <div className="tts-messages">
+      <div className="flex-1 overflow-y-auto py-4 flex flex-col gap-4">
         {messages.map((msg) => (
-          <div key={msg.id} className={`message ${msg.audioUrl ? "ai" : "user"}`}>
-            <div className="message-content">
-              <div className="message-text">{msg.text}</div>
+          <div
+            key={msg.id}
+            className={`flex gap-3 animate-fade-in ${msg.audioUrl ? "" : "flex-row-reverse"}`}
+          >
+            <div
+              className={`max-w-[70%] sm:max-w-[70%] p-3 rounded-2xl leading-relaxed ${
+                msg.audioUrl
+                  ? "bg-gray-100 dark:bg-slate-700 text-stone-700 dark:text-slate-300"
+                  : "bg-emerald-600 text-white"
+              }`}
+            >
+              <div className="whitespace-pre-wrap break-words">{msg.text}</div>
               {msg.audioUrl && (
-                <div className="message-audio">
+                <div className="mt-2">
                   <audio
                     id={`audio-${msg.id}`}
                     controls
-                    className="audio-player"
+                    className="min-w-[200px] w-full h-10"
                     src={msg.audioUrl}
                   />
                 </div>
@@ -145,13 +156,18 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
         <div ref={messagesEndRef} />
       </div>
 
-      {status && <div className="tts-status">{status}</div>}
+      {status && (
+        <div className="text-center text-stone-500 dark:text-slate-400 text-sm mt-2 transition-colors duration-300">
+          {status}
+        </div>
+      )}
 
-      <div className="tts-input-area">
-        <div className="input-wrapper">
+      <div className="py-4 border-t border-stone-200 dark:border-slate-700 transition-[border-color] duration-300">
+        <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
           <textarea
             ref={textInputRef}
-            className="tts-textarea"
+            className="flex-1 p-3 border border-stone-200 dark:border-slate-700 rounded-md text-base resize-none font-inherit bg-white dark:bg-slate-800 text-stone-700 dark:text-slate-300 focus:outline-none focus:border-green-700 dark:focus:border-green-400 disabled:bg-gray-100 disabled:dark:bg-slate-700 disabled:cursor-not-allowed transition-[border-color,background-color,color] duration-200"
+            style={{ minHeight: "60px", maxHeight: "150px" }}
             placeholder="Enter text to synthesize..."
             rows={1}
             onKeyDown={handleKeyDown}
@@ -159,14 +175,18 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
           />
           <button
             type="button"
-            className={`tts-button ${isLoading ? "loading" : ""}`}
+            className={`py-3 px-6 text-white border-none rounded-md text-base font-medium cursor-pointer whitespace-nowrap transition-colors duration-200 ${
+              isLoading
+                ? "relative text-transparent bg-slate-300 dark:bg-slate-600 cursor-not-allowed loading-spinner"
+                : "bg-green-700 dark:bg-green-400 hover:bg-green-800 dark:hover:bg-green-500"
+            }`}
             onClick={handleGenerate}
             disabled={isLoading}
           >
             {isLoading ? "" : "Generate"}
           </button>
         </div>
-        {error && <div className="tts-error">{error}</div>}
+        {error && <div className="text-red-500 text-sm mt-2 text-center">{error}</div>}
       </div>
     </div>
   );

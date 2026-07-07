@@ -4,16 +4,29 @@ interface Props {
 }
 
 const { activePage = "" } = Astro.props;
+
+const links = [
+  { label: "Home", href: "/", active: "/" },
+  { label: "About", href: "/about/", active: "/about/" },
+  { label: "Blog", href: "/blog/", active: "/blog/" },
+  { label: "TTS", href: "/tts/", active: "/tts/" },
+];
 ---
 
-<nav class="nav-bar">
-  <a class="center" href="/" class={activePage === "/" ? "active" : ""}>Home</a>
-  <a class="center" href="/about/" class={activePage === "/about/" ? "active" : ""}>About</a>
-  <a class="center" href="/blog/" class={activePage === "/blog/" ? "active" : ""}>Blog</a>
-  <a class="center" href="/tts/" class={activePage === "/tts/" ? "active" : ""}>TTS</a>
-  <button id="theme-toggle" class="theme-toggle right" aria-label="Toggle dark mode">
+<nav class="relative flex items-center justify-center gap-6 p-4 bg-white dark:bg-slate-800 border-b border-stone-200 dark:border-slate-700 theme-ready transition-[background-color,border-color] duration-300 nav-responsive">
+  {links.map((link) => {
+    const isActive = activePage === link.active;
+    return (
+      <a
+        href={link.href}
+        class="flex text-stone-800 dark:text-slate-300 text-sm font-medium no-underline hover:text-green-700 dark:hover:text-green-400 transition-colors duration-200"
+        {...(isActive ? { class: "active text-green-700 dark:text-green-400" } : {})}
+      >{link.label}</a>
+    );
+  })}
+  <button id="theme-toggle" class="absolute right-0 bg-transparent border-none cursor-pointer p-0 w-10 h-10 rounded-full flex items-center justify-center mx-3 hover:bg-stone-200 dark:hover:bg-slate-700 transition-colors duration-300" aria-label="Toggle dark mode">
     <!-- Sun Icon -->
-    <svg class="theme-icon sun-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg class="theme-icon sun-icon absolute w-5 h-5 text-stone-800 dark:text-slate-100" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <circle cx="12" cy="12" r="5"/>
       <line x1="12" y1="1" x2="12" y2="3"/>
       <line x1="12" y1="21" x2="12" y2="23"/>
@@ -25,7 +38,7 @@ const { activePage = "" } = Astro.props;
       <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
     </svg>
     <!-- Moon Icon -->
-    <svg class="theme-icon moon-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <svg class="theme-icon moon-icon absolute w-5 h-5 text-stone-800 dark:text-slate-100" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
       <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
     </svg>
   </button>
