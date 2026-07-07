@@ -12,14 +12,22 @@
 .tts-header {
   text-align: center;
   padding: 1rem 0;
-  border-bottom: 1px solid #e5e7eb;
+  border-bottom: 1px solid var(--divider);
   margin-bottom: 1rem;
+}
+
+.theme-ready .tts-header {
+  transition: border-color 0.3s ease;
 }
 
 .tts-header h1 {
   margin: 0;
   font-size: 1.5rem;
-  color: #374151;
+  color: var(--heading-color);
+}
+
+.theme-ready .tts-header h1 {
+  transition: color 0.3s ease;
 }
 
 .tts-messages {
@@ -54,8 +62,14 @@
 }
 
 .message.ai .message-content {
-  background-color: #f3f4f6;
-  color: #374151;
+  background-color: var(--code-bg);
+  color: var(--text-color);
+}
+
+.theme-ready .message.ai .message-content {
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .message-text {
@@ -75,7 +89,11 @@
 
 .tts-input-area {
   padding: 1rem 0;
-  border-top: 1px solid #e5e7eb;
+  border-top: 1px solid var(--divider);
+}
+
+.theme-ready .tts-input-area {
+  transition: border-color 0.3s ease;
 }
 
 .input-wrapper {
@@ -89,27 +107,36 @@
   min-height: 60px;
   max-height: 150px;
   padding: 0.75rem;
-  border: 1px solid #d1d5db;
+  border: 1px solid var(--nav-border);
   border-radius: 0.5rem;
   font-size: 1rem;
   resize: none;
   font-family: inherit;
   transition: border-color 0.2s;
+  background-color: var(--card-bg);
+  color: var(--text-color);
+}
+
+.theme-ready .tts-textarea {
+  transition:
+    border-color 0.2s,
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .tts-textarea:focus {
   outline: none;
-  border-color: #10a37f;
+  border-color: var(--nav-link-hover);
 }
 
 .tts-textarea:disabled {
-  background-color: #f9fafb;
+  background-color: var(--code-bg);
   cursor: not-allowed;
 }
 
 .tts-button {
   padding: 0.75rem 1.5rem;
-  background-color: #10a37f;
+  background-color: var(--nav-link-hover);
   color: white;
   border: none;
   border-radius: 0.5rem;
@@ -121,11 +148,11 @@
 }
 
 .tts-button:hover:not(:disabled) {
-  background-color: #0d8a6a;
+  background-color: var(--link-hover);
 }
 
 .tts-button:disabled {
-  background-color: #9ca3af;
+  background-color: var(--scrollbar-thumb);
   cursor: not-allowed;
 }
 
@@ -158,9 +185,13 @@
 
 .tts-status {
   text-align: center;
-  color: #6b7280;
+  color: var(--meta-color);
   font-size: 0.875rem;
   margin-top: 0.5rem;
+}
+
+.theme-ready .tts-status {
+  transition: color 0.3s ease;
 }
 
 @keyframes fadeIn {

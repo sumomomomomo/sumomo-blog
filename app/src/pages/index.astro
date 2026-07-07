@@ -1,6 +1,5 @@
 ---
-import "../styles/global.css";
-import Nav from "../components/Nav.astro";
+import BaseLayout from "../layouts/BaseLayout.astro";
 
 interface Props {
   title?: string;
@@ -11,18 +10,9 @@ const { title = "Sumomo Horse", cdnUrl = "https://cdn.sumomo.horse/misc/unsu-tru
   Astro.props;
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width" />
-		<title>{title}</title>
-	</head>
-	<body>
-        <Nav activePage="/" />
-
-		<h1>Under Construction (Astro Edition)</h1>
-        <img src={cdnUrl} alt="Seiun Sky" width="256" height="256" />
-		<br>
-		<a href="https://github.com/sumomomomomo/sumomo-blog">Link to this blog's github repo</h3>
-	</body>
-</html>
+<BaseLayout title={title} activePage="/">
+	<h1>Under Construction (Astro Edition)</h1>
+    <img src={cdnUrl} alt="Seiun Sky" width="256" height="256" />
+	<br>
+	<a href="https://github.com/sumomomomomo/sumomo-blog">Link to this blog's github repo</a>
+</BaseLayout>

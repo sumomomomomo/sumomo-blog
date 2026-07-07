@@ -124,7 +124,6 @@ const TTS = ({ apiUrl = "/api/voice" }: TTSProps) => {
       <header className="tts-header">
         <h1>Text to Speech</h1>
       </header>
-
       <div className="tts-messages">
         {messages.map((msg) => (
           <div key={msg.id} className={`message ${msg.audioUrl ? "ai" : "user"}`}>
