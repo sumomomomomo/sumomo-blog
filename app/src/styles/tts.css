@@ -58,7 +58,9 @@
 .message.ai .message-content {
   background-color: var(--code-bg);
   color: var(--text-color);
-  transition: background-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .message-text {

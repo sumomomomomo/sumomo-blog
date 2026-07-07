@@ -6,7 +6,9 @@
   background-color: var(--card-bg);
   border-radius: 8px;
   box-shadow: 0 2px 8px var(--card-shadow);
-  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    box-shadow 0.3s ease;
 }
 
 /* Header */
@@ -126,7 +128,10 @@
   background-color: var(--blockquote-bg);
   font-style: italic;
   color: var(--meta-color);
-  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+  transition:
+    background-color 0.3s ease,
+    border-color 0.3s ease,
+    color 0.3s ease;
 }
 
 .blog-post-content code {
@@ -195,7 +200,9 @@
   border-radius: 20px;
   font-size: 0.85rem;
   font-weight: 500;
-  transition: background-color 0.2s ease, color 0.3s ease;
+  transition:
+    background-color 0.2s ease,
+    color 0.3s ease;
 }
 
 .blog-post-tag:hover {

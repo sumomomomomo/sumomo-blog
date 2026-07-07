@@ -1,5 +1,6 @@
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
+import type { Frontmatter } from "../types/frontmatter";
 
 interface PostModule {
   id: string;
@@ -15,28 +16,28 @@ interface PostModule {
 
 const postsRaw = import.meta.glob("./posts/*.md", { eager: true });
 
-const posts: PostModule[] = Object.entries(postsRaw)
-  .map(([path, mod]) => {
-    const fileName = path.split("/").pop()?.replace(/\.md$/, "") ?? "";
-    const moduleData = mod as any;
-    const fm = moduleData.frontmatter ?? moduleData.metadata ?? {};
-    return {
-      id: `posts/${fileName}`,
-      metadata: {
-        title: fm.title ?? fileName,
-        description: fm.description ?? "",
-        author: fm.author ?? "",
-        pubDate: fm.pubDate ?? "",
-        image: fm.image,
-        tags: fm.tags ?? [],
-      },
-    };
-  })
-  .sort((a, b) => {
-    const dateA = a.metadata.pubDate ? new Date(a.metadata.pubDate).getTime() : 0;
-    const dateB = b.metadata.pubDate ? new Date(b.metadata.pubDate).getTime() : 0;
-    return dateB - dateA;
-  });
+const posts: PostModule[] = Object.entries(postsRaw).map(([path, mod]) => {
+  const fileName = path.split("/").pop()?.replace(/\.md$/, "") ?? "";
+  const modTyped = mod as { frontmatter?: Frontmatter };
+  const fm = modTyped.frontmatter ?? {};
+  return {
+    id: `posts/${fileName}`,
+    metadata: {
+      title: (fm as Frontmatter).title ?? fileName,
+      description: (fm as Frontmatter).description,
+      author: (fm as Frontmatter).author,
+      pubDate: (fm as Frontmatter).pubDate,
+      image: (fm as Frontmatter).image,
+      tags: (fm as Frontmatter).tags,
+    },
+  };
+});
+
+posts.sort((a, b) => {
+  const dateA = a.metadata.pubDate ? new Date(a.metadata.pubDate).getTime() : 0;
+  const dateB = b.metadata.pubDate ? new Date(b.metadata.pubDate).getTime() : 0;
+  return dateB - dateA;
+});
 ---
 
 <BaseLayout title="Sumomo - Blog" activePage="/blog/">

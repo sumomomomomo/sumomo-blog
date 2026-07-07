@@ -1,11 +1,11 @@
 // Type definitions for Astro frontmatter
 
-interface Image {
+export interface Image {
   url: string;
   alt: string;
 }
 
-interface Frontmatter {
+export interface Frontmatter {
   title: string;
   pubDate: string;
   description: string;
