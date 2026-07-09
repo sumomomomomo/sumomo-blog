@@ -1,11 +1,15 @@
 ---
+import { getEntry } from "astro:content";
 import type { Frontmatter } from "../types/frontmatter";
 import BaseLayout from "./BaseLayout.astro";
-import { getEntry } from 'astro:content';
 
 const postProps: Frontmatter = Astro.props.frontmatter;
-const nextPostData = postProps.nextPostId ? (await getEntry('blog', postProps.nextPostId))?.data : null;
-const prevPostData = postProps.prevPostId ? (await getEntry('blog', postProps.prevPostId))?.data : null;
+const nextPostData = postProps.nextPostId
+  ? (await getEntry("blog", postProps.nextPostId))?.data
+  : null;
+const prevPostData = postProps.prevPostId
+  ? (await getEntry("blog", postProps.prevPostId))?.data
+  : null;
 ---
 
 <BaseLayout title={postProps.title ?? "Sumomo Blog"}>
