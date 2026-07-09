@@ -1,6 +1,7 @@
 ---
 import "../styles/tailwind.css";
 import Nav from "../components/Nav.astro";
+import { ClientRouter } from 'astro:transitions';
 
 interface Props {
   title: string;
@@ -15,15 +16,29 @@ const { title, activePage = "" } = Astro.props;
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width" />
     <title>{title}</title>
+    <ClientRouter />
     <script is:inline>
-      (function() {
-        var theme = localStorage.getItem('theme');
-        if (!theme) {
-          theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
+      // 1. Function to get theme and apply it to the <html> element
+      const applyTheme = () => {
+        const theme = (() => {
+          if (typeof localStorage !== 'undefined' && localStorage.getItem('theme')) {
+            return localStorage.getItem('theme');
+          }
+          if (window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            return 'dark';
+          }
+          return 'light';
+        })();
+        
+        // Apply the attribute to the document element
         document.documentElement.setAttribute('data-theme', theme);
-        document.documentElement.classList.add('theme-ready');
-      })();
+      };
+
+      // 2. Run immediately on initial page load
+      applyTheme();
+
+      // 3. Run immediately after Astro swaps the page content during navigation
+      document.addEventListener('astro:after-swap', applyTheme);
     </script>
     <slot name="head" />
   </head>
@@ -33,3 +48,4 @@ const { title, activePage = "" } = Astro.props;
     <slot />
   </body>
 </html>
+
