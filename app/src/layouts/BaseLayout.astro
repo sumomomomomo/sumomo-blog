@@ -37,10 +37,13 @@ const { title, activePage = "" } = Astro.props;
       // 2. Run immediately on initial page load
       applyTheme();
 
-      // 3. Run immediately after Astro swaps the page content during navigation
+      // 3. Run BEFORE Astro swaps the page content to prevent white flash
+      document.addEventListener('astro:before-swap', applyTheme);
+
+      // 4. Run immediately after Astro swaps the page content during navigation
       document.addEventListener('astro:after-swap', applyTheme);
 
-      // 4. Prevent FOUC on manual back button
+      // 5. Prevent FOUC on manual back button
       window.addEventListener('pageshow', (event) => {
         if (event.persisted) {
           window.location.reload(); 
