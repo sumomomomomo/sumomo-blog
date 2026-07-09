@@ -7,21 +7,21 @@ const postProps: Frontmatter = Astro.props.frontmatter;
 
 <BaseLayout title={postProps.title ?? "Sumomo Blog"}>
     <header class="mb-8">
-      <h1 class="text-6xl mt-10 font-bold text-stone-800 text-center dark:text-slate-100 my-0 mb-4 leading-tight transition-colors duration-300">{postProps.title}</h1>
-      <p class="text-lg text-stone-500 dark:text-slate-400 my-0 mb-4 leading-relaxed italic transition-colors duration-300">{postProps.description}</p>
+      <h1 class="text-6xl mt-8 font-bold text-stone-800 text-center dark:text-slate-100 mb-4 leading-tight transition-colors duration-300">{postProps.title}</h1>
+      <p class="text-lg text-center text-stone-500 dark:text-slate-400 my-0 mb-4 leading-relaxed italic transition-colors duration-300">{postProps.description}</p>
       {postProps.image && (
-        <div class="my-6 -mx-8 md:-mx-6 overflow-hidden">
+        <div class="my-6 px-2 mx-auto overflow-hidden max-w-none">
           <img src={postProps.image?.url} alt={postProps.image?.alt} class="w-full h-auto block" />
         </div>
       )}
-      <div class="flex gap-4 text-sm text-stone-500 dark:text-slate-400 transition-colors duration-300">
+      <div class="flex gap-4 pl-4 text-sm text-stone-500 dark:text-slate-400 transition-colors duration-300">
         <span class="font-semibold text-stone-800 dark:text-slate-100 transition-colors duration-300">{postProps.author}</span>
         {postProps.pubDate && (
           <span>{new Date(postProps.pubDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
         )}
       </div>
     </header>
-    <article class="border-r-4 border-stone-200 dark:border-stone-800 max-w-75ch p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md theme-ready transition-[background-color,box-shadow,border-color] duration-300">
+    <article class="mx-auto border-r-4 border-stone-200 dark:border-stone-800 max-w-[75ch] p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md theme-ready transition-[background-color,box-shadow,border-color] duration-300">
       <div class="prose prose-stone dark:prose-invert prose-green max-w-none">
         <slot />
       </div>
