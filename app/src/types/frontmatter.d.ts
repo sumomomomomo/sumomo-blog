@@ -12,4 +12,6 @@ export interface Frontmatter {
   author: string;
   image?: Image;
   tags: string[];
+  nextPostId?: string;
+  prevPostId?: string;
 }

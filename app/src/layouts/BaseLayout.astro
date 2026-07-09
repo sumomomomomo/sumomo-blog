@@ -39,6 +39,13 @@ const { title, activePage = "" } = Astro.props;
 
       // 3. Run immediately after Astro swaps the page content during navigation
       document.addEventListener('astro:after-swap', applyTheme);
+
+      // 4. Prevent FOUC on manual back button
+      window.addEventListener('pageshow', (event) => {
+        if (event.persisted) {
+          window.location.reload(); 
+        }
+      });
     </script>
     <slot name="head" />
   </head>
