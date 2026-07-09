@@ -13,7 +13,7 @@ const links = [
 ];
 ---
 
-<nav class="relative flex items-center justify-center gap-6 p-4 bg-white dark:bg-slate-800 border-b border-stone-200 dark:border-slate-700 theme-ready transition-[background-color,border-color] duration-300 nav-responsive">
+<nav class="relative flex items-center justify-left md:justify-center gap-6 p-4 bg-white dark:bg-slate-800 border-b border-stone-200 dark:border-slate-700 theme-ready transition-[background-color,border-color] duration-300 nav-responsive">
   {links.map((link) => {
     const isActive = activePage === link.active;
     return (
@@ -44,17 +44,22 @@ const links = [
   </button>
 </nav>
 
-<script is:inline>
-  // Theme initialization is handled by BaseLayout inline script to prevent FOUC.
-  // This script only handles the toggle button click and system preference changes.
-
-  document.getElementById('theme-toggle')?.addEventListener('click', () => {
-    const current = document.documentElement.getAttribute('data-theme');
-    const next = current === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    localStorage.setItem('theme', next);
+<script>
+  // This event fires on initial load AND every client-side navigation
+  document.addEventListener('astro:page-load', () => {
+    
+    const toggleBtn = document.getElementById('theme-toggle');
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const current = document.documentElement.getAttribute('data-theme');
+        const next = current === 'dark' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-theme', next);
+        localStorage.setItem('theme', next);
+      });
+    }
   });
 
+  // System preference listener can stay at the window level safely
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
     if (!localStorage.getItem('theme')) {
       document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');

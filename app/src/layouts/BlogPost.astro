@@ -1,55 +1,63 @@
 ---
+import { getEntry } from "astro:content";
+import type { Frontmatter } from "../types/frontmatter";
 import BaseLayout from "./BaseLayout.astro";
 
-interface Image {
-  url: string;
-  alt: string;
-}
-
-interface Props {
-  title?: string;
-  description?: string;
-  author?: string;
-  pubDate?: string;
-  image?: Image;
-  tags?: string[];
-}
-
-const { title = "Sumomo - Blog Post" } = Astro.props;
+const postProps: Frontmatter = Astro.props.frontmatter;
+const nextPostData = postProps.nextPostId
+  ? (await getEntry("blog", postProps.nextPostId))?.data
+  : null;
+const prevPostData = postProps.prevPostId
+  ? (await getEntry("blog", postProps.prevPostId))?.data
+  : null;
 ---
 
-<BaseLayout title={title}>
-    <article class="max-w-68ch mx-auto my-8 p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md theme-ready transition-[background-color,box-shadow] duration-300">
-      <header class="mb-8">
-        <h1 class="text-2xl md:text-xl text-xl font-bold text-stone-800 dark:text-slate-100 my-0 mb-4 leading-tight transition-colors duration-300">{Astro.props.title}</h1>
-        <p class="text-lg text-stone-500 dark:text-slate-400 my-0 mb-4 leading-relaxed italic transition-colors duration-300">{Astro.props.description}</p>
-        <div class="flex gap-4 text-sm text-stone-500 dark:text-slate-400 transition-colors duration-300">
-          <span class="font-semibold text-stone-800 dark:text-slate-100 transition-colors duration-300">{Astro.props.author}</span>
-          {Astro.props.pubDate && (
-            <span>{new Date(Astro.props.pubDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
-          )}
-        </div>
-      </header>
-
-      {Astro.props.image && (
-        <div class="my-6 -mx-8 md:-mx-6 rounded-t-lg rounded-b-none overflow-hidden">
-          <img src={Astro.props.image.url} alt={Astro.props.image.alt} class="w-full h-auto block" />
+<BaseLayout title={postProps.title ?? "Sumomo Blog"}>
+    <header class="mb-8">
+      <h1 class="text-6xl mt-8 font-bold text-stone-800 text-center dark:text-slate-100 mb-4 leading-tight transition-colors duration-300">{postProps.title}</h1>
+      <p class="text-lg text-center text-stone-500 dark:text-slate-400 my-0 mb-4 leading-relaxed italic transition-colors duration-300">{postProps.description}</p>
+      {postProps.image && (
+        <div class="my-6 px-2 mx-auto overflow-hidden max-w-none">
+          <img src={postProps.image?.url} alt={postProps.image?.alt} class="w-full h-auto block" />
         </div>
       )}
-
+      <div class="flex gap-4 pl-4 text-sm text-stone-500 dark:text-slate-400 transition-colors duration-300">
+        <span class="font-semibold text-stone-800 dark:text-slate-100 transition-colors duration-300">{postProps.author}</span>
+        {postProps.pubDate && (
+          <span>{new Date(postProps.pubDate).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</span>
+        )}
+      </div>
+    </header>
+    <article class="mx-auto border-r-4 border-stone-200 dark:border-stone-800 max-w-[75ch] p-8 bg-white dark:bg-slate-800 rounded-lg shadow-md theme-ready transition-[background-color,box-shadow,border-color] duration-300">
       <div class="prose prose-stone dark:prose-invert prose-green max-w-none">
         <slot />
       </div>
-
-      {Astro.props.tags && Astro.props.tags.length > 0 && (
-        <footer class="mt-8">
-          <hr class="border-none border-t border-stone-200 dark:border-slate-700 my-8 mb-6 transition-[border-color] duration-300" />
-          <div class="flex flex-wrap gap-2">
-            {Astro.props.tags.map((tag: string) => (
-              <span class="inline-block px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-stone-500 dark:text-slate-300 rounded-full text-sm font-medium hover:bg-stone-200 dark:hover:bg-slate-600 transition-[background-color,color] duration-200">{tag}</span>
-            ))}
-          </div>
-        </footer>
-      )}
+      <footer class="mt-8">
+      <div class="flex justify-between items-center w-full">
+        {postProps.prevPostId && (
+          <a 
+            class="text-stone-800/75 dark:text-slate-300/75 text-sm font-medium hover:text-green-700 dark:hover:text-green-400 transition-colors duration-200" 
+            href={`/posts/${postProps.prevPostId}`}>
+            ← {prevPostData.title}
+          </a>
+        )}
+        
+        {postProps.nextPostId && (        
+          <a 
+            class="ml-auto text-stone-800/75 dark:text-slate-300/75 text-sm font-medium hover:text-green-700 dark:hover:text-green-400 transition-colors duration-200" 
+            href={`/posts/${postProps.nextPostId}`}>
+            {nextPostData.title} →
+          </a>
+        )}
+      </div>
+        {postProps.tags && postProps.tags.length > 0 && (
+            <div class="flex flex-wrap gap-2 mt-4">
+              {postProps.tags.map((tag: string) => (
+                <span class="inline-block px-3 py-1.5 bg-gray-100 dark:bg-slate-700 text-stone-500 dark:text-slate-300 rounded-full text-sm font-medium hover:bg-stone-200 dark:hover:bg-slate-600 transition-[background-color,color] duration-200">{tag}</span>
+              ))}
+            </div>
+        )}
+      </footer>
     </article>
+
 </BaseLayout>
