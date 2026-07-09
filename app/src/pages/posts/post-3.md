@@ -8,5 +8,7 @@ image:
     alt: "The Astro logo on a dark background with rainbow rays."
 pubDate: 2022-07-15
 tags: ["astro", "learning in public", "setbacks", "community"]
+nextPostId: markdown-test
+prevPostId: post-2
 ---
 It wasn't always smooth sailing, but I'm enjoying building with Astro. If this message is showing CI/CD is working

@@ -8,6 +8,8 @@ image:
     url: 'https://docs.astro.build/assets/rose.webp'
     alt: 'The Astro logo on a dark background with a pink glow.'
 tags: ["markdown", "testing", "documentation"]
+prevPostId: post-3
+nextPostId: utokyo-vibe-coding-1
 ---
 
 # Markdown Formatting Test

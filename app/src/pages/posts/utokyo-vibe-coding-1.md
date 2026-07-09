@@ -8,6 +8,7 @@ image:
     url: 'https://docs.astro.build/assets/rose.webp'
     alt: 'The Astro logo on a dark background with a pink glow.'
 tags: ["utokyo","vibe-coding"]
+prevPostId: markdown-test
 ---
 ## What is this post about?
 This blog is pretty barebones. In fact, it is word for word and beat for beat identical to Astro’s official blog creation tutorial. With the exception that I stopped halfway through. This blog has always been something I have wanted to work on for hosting personal projects. (I am also interested in not going homeless, and having a personal website gives me an additional line to write on my resume).
