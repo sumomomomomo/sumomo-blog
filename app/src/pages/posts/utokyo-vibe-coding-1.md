@@ -12,7 +12,7 @@ prevPostId: markdown-test
 nextPostId: utokyo-vibe-coding-2
 ---
 > "The hottest new programming language is English."
-> - [Andrej Karpathy, 2025](https://x.com/karpathy/status/1617979122625712128)
+> - [Andrej Karpathy, 2023](https://x.com/karpathy/status/1617979122625712128)
 
 Faced with the looming threat of unemployment (graduation) I set my sights on experimenting with the hottest new thing: vibe coding. Specificially, to wrestle with the question: *Can I learn front-end development while I vibe-code on this website?*
 
