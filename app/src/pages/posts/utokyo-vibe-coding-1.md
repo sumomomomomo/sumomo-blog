@@ -67,5 +67,3 @@ As far as possible, I will pick the low-hanging fruit and implement the most bas
 - Do not allow Qwen to push directly to `main`. Instead, use [branch protection to require pull requests, reviews, and passing status checks](https://docs.github.com/articles/enabling-required-reviews-for-pull-requests), and have Qwen make its changes on a separate branch for me to review.
 
 There are probably more out there that I don't know about, but ultimately the quality of the codebase is not the main focus of the experiment. These best practices are mainly for squeezing blood (quality) from a rock (AI). While I would certainly prefer for Qwen to not output garbage, I will not be too bummed if it did, because it will introduce the friction of debugging and become a cool learning moment.
-
-Now that the preparation is complete, let's begin with the sprints...
