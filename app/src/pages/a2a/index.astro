@@ -1,0 +1,61 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const pages = import.meta.glob("./*.astro", { eager: true });
+
+interface A2AEntry {
+  title: string;
+  description: string;
+  href: string;
+}
+
+const entries: A2AEntry[] = Object.entries(pages)
+  .filter(([path]) => !path.endsWith("index.astro"))
+  .map(([path]) => {
+    const slug = path.replace("./", "").replace(".astro", "");
+    const title = slug
+      .split("-")
+      .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+      .join(" ");
+    return {
+      title,
+      description: `A2A protocol ${title.toLowerCase()} demo.`,
+      href: `/a2a/${slug}/`,
+    };
+  })
+  .sort((a, b) => a.title.localeCompare(b.title));
+---
+
+<BaseLayout title="A2A - Agent to Agent" activePage="/a2a/">
+  <div style="width: 100vw; margin-left: calc(-50vw + 50%);">
+    <div class="max-w-[900px] mx-auto px-4 sm:px-8">
+      <header class="mt-8 mb-8">
+        <p class="mb-2 font-mono text-sm font-semibold text-green-700 dark:text-green-400">
+          A2A Protocol
+        </p>
+        <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Agent to Agent</h1>
+        <p class="mt-3 text-stone-600 dark:text-slate-300">
+          Interactive demos of the A2A protocol specification.
+        </p>
+      </header>
+
+      <div class="grid gap-8 grid-cols-[repeat(auto-fill,minmax(320px,1fr))]">
+        {entries.map((entry) => (
+          <a
+            href={entry.href}
+            class="flex flex-col bg-white dark:bg-slate-800 rounded-xl shadow-md no-underline text-inherit overflow-hidden hover:-translate-y-1 hover:shadow-lg transition-[transform,box-shadow,background-color] duration-300"
+          >
+            <div class="p-6 flex flex-col flex-grow">
+              <h2 class="text-lg font-bold text-stone-800 dark:text-slate-100 my-0 mb-3 leading-snug transition-colors duration-300">
+                {entry.title}
+              </h2>
+              <p class="text-sm text-stone-700 dark:text-slate-300 my-0 mb-4 leading-relaxed transition-colors duration-300">
+                {entry.description}
+              </p>
+            </div>
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+</BaseLayout>
