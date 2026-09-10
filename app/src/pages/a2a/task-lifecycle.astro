@@ -217,6 +217,29 @@ const states = [
 </BaseLayout>
 
 <script>
+  const escapeHtml = (text: string) =>
+    text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
+
+  function highlightJson(text: string): string {
+    const escaped = escapeHtml(text);
+    return escaped.replace(
+      /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+      (match) => {
+        let cls = "text-amber-700 dark:text-amber-300";
+        if (match.startsWith('"')) {
+          cls = match.endsWith(":")
+            ? "text-sky-700 dark:text-sky-300"
+            : "text-emerald-700 dark:text-emerald-300";
+        } else if (match === "true" || match === "false") {
+          cls = "text-violet-700 dark:text-violet-300";
+        } else if (match === "null") {
+          cls = "text-stone-500 dark:text-stone-400";
+        }
+        return `<span class="${cls}">${match}</span>`;
+      },
+    );
+  }
+
   type TaskState =
     | "TASK_STATE_SUBMITTED"
     | "TASK_STATE_WORKING"
@@ -300,7 +323,7 @@ const states = [
     function setExchange(operation: string, request: object, response: object, result: "Task" | "Error" = "Task") {
       showArrow(operation, result);
       exchangeBadge.textContent = operation;
-      exchangeOutput.textContent = JSON.stringify({ request, response }, null, 2);
+      exchangeOutput.innerHTML = highlightJson(JSON.stringify({ request, response }, null, 2));
       flowStatus.textContent = `${operation} → ${result}`;
     }
 
@@ -325,7 +348,7 @@ const states = [
 
     function render() {
       const state = task?.status.state ?? "TASK_STATE_UNSPECIFIED";
-      taskOutput.textContent = task ? JSON.stringify(task, null, 2) : "null";
+      taskOutput.innerHTML = task ? highlightJson(JSON.stringify(task, null, 2)) : "null";
       stateBadge.textContent = state;
       flowStatus.textContent = task ? `${state.replace("TASK_STATE_", "")} · ${task.id.slice(0, 8)}` : "No task yet";
       createButton.disabled = Boolean(task);

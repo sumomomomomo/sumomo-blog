@@ -191,6 +191,29 @@ const streamSteps = [
 </BaseLayout>
 
 <script>
+  const escapeHtml = (text: string) =>
+    text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
+
+  function highlightJson(text: string): string {
+    const escaped = escapeHtml(text);
+    return escaped.replace(
+      /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+      (match) => {
+        let cls = "text-amber-700 dark:text-amber-300";
+        if (match.startsWith('"')) {
+          cls = match.endsWith(":")
+            ? "text-sky-700 dark:text-sky-300"
+            : "text-emerald-700 dark:text-emerald-300";
+        } else if (match === "true" || match === "false") {
+          cls = "text-violet-700 dark:text-violet-300";
+        } else if (match === "null") {
+          cls = "text-stone-500 dark:text-stone-400";
+        }
+        return `<span class="${cls}">${match}</span>`;
+      },
+    );
+  }
+
   type TaskState =
     | "TASK_STATE_SUBMITTED"
     | "TASK_STATE_WORKING"
@@ -296,7 +319,7 @@ const streamSteps = [
 
     function setWire(label: string, value: object, delivered = true) {
       wireBadge.textContent = `${label} · ${delivered ? "delivered" : "missed"}`;
-      wireOutput.textContent = JSON.stringify(value, null, 2);
+      wireOutput.innerHTML = highlightJson(JSON.stringify(value, null, 2));
     }
 
     function buildEvent(step: number): StreamEvent {
@@ -386,7 +409,7 @@ const streamSteps = [
             ? "CONNECTED"
             : "DISCONNECTED";
       projectionBadge.textContent = clientTask?.status.state ?? "No Task";
-      projectionOutput.textContent = clientTask ? JSON.stringify(clientTask, null, 2) : "null";
+      projectionOutput.innerHTML = clientTask ? highlightJson(JSON.stringify(clientTask, null, 2)) : "null";
 
       stepNodes.forEach((node, index) => {
         const state = deliveries[index];
@@ -485,6 +508,8 @@ const streamSteps = [
       wireBadge.textContent = "None";
       wireOutput.textContent = "Start a stream to begin.";
       flowStatus.textContent = "Ready";
+      projectionBadge.textContent = "No Task";
+      projectionOutput.textContent = "null";
       render();
     });
 
