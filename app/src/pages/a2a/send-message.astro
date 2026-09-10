@@ -5,6 +5,10 @@ const fieldClass = "flex flex-col gap-1.5";
 const fieldTypeClass = "text-xs font-medium text-stone-500 dark:text-slate-400";
 const controlClass =
   "w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 font-mono text-sm text-stone-800 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200";
+const jsonAreaClass =
+  "relative z-10 block w-full resize-y overflow-auto rounded-lg border border-stone-300 bg-transparent px-3 py-2.5 font-mono text-sm leading-5 text-transparent caret-stone-800 outline-none [tab-size:2] focus:border-green-600 focus:ring-2 focus:ring-green-300 dark:border-slate-600 dark:caret-slate-200 dark:focus:ring-green-600";
+const jsonBackdropClass =
+  "pointer-events-none absolute inset-0 z-0 m-0 overflow-hidden whitespace-pre rounded-lg border border-transparent bg-stone-50 px-3 py-2.5 font-mono text-sm leading-5 text-stone-800 [tab-size:2] dark:bg-slate-900 dark:text-slate-200";
 
 const defaultMessage = JSON.stringify(
   { role: "ROLE_USER", parts: [{ text: "Plan a weekend in Kyoto" }], messageId: "msg-001" },
@@ -115,17 +119,26 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
 
         <label class={fieldClass}>
           <span class="font-bold"><code>message</code> <small class={fieldTypeClass}>Message · required</small></span>
-          <textarea class={`${controlClass} resize-y`} id="message" name="message" rows="7" required spellcheck="false">{defaultMessage}</textarea>
+          <div class="relative">
+            <pre class={jsonBackdropClass} id="message-backdrop" aria-hidden="true"></pre>
+            <textarea class={jsonAreaClass} id="message" name="message" rows="7" required spellcheck="false">{defaultMessage}</textarea>
+          </div>
         </label>
 
         <label class={fieldClass}>
           <span class="font-bold"><code>configuration</code> <small class={fieldTypeClass}>SendMessageConfiguration · optional</small></span>
-          <textarea class={`${controlClass} resize-y`} id="configuration" name="configuration" rows="6" spellcheck="false">{defaultConfiguration}</textarea>
+          <div class="relative">
+            <pre class={jsonBackdropClass} id="configuration-backdrop" aria-hidden="true"></pre>
+            <textarea class={jsonAreaClass} id="configuration" name="configuration" rows="6" spellcheck="false">{defaultConfiguration}</textarea>
+          </div>
         </label>
 
         <label class={fieldClass}>
           <span class="font-bold"><code>metadata</code> <small class={fieldTypeClass}>object · optional</small></span>
-          <textarea class={`${controlClass} resize-y`} id="metadata" name="metadata" rows="6" spellcheck="false">{defaultMetadata}</textarea>
+          <div class="relative">
+            <pre class={jsonBackdropClass} id="metadata-backdrop" aria-hidden="true"></pre>
+            <textarea class={jsonAreaClass} id="metadata" name="metadata" rows="6" spellcheck="false">{defaultMetadata}</textarea>
+          </div>
         </label>
       </div>
 
@@ -159,7 +172,7 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
         <h2 id="response-heading" class="text-lg font-semibold">Exchange payloads</h2>
         <span id="response-badge" class="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide"></span>
       </div>
-      <pre class="overflow-x-auto text-sm"><code id="response-json"></code></pre>
+      <pre class="overflow-x-auto font-mono text-sm leading-5 [tab-size:2]" id="response-pre"><code id="response-json"></code></pre>
     </section>
   </main>
 </BaseLayout>
@@ -177,6 +190,50 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
 
   const wait = (milliseconds: number) =>
     new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+  const escapeHtml = (text: string) =>
+    text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
+
+  function highlightJson(text: string): string {
+    const escaped = escapeHtml(text);
+    return escaped.replace(
+      /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
+      (match) => {
+        let cls = "text-amber-700 dark:text-amber-300";
+        if (match.startsWith('"')) {
+          cls = match.endsWith(":")
+            ? "text-sky-700 dark:text-sky-300"
+            : "text-emerald-700 dark:text-emerald-300";
+        } else if (match === "true" || match === "false") {
+          cls = "text-violet-700 dark:text-violet-300";
+        } else if (match === "null") {
+          cls = "text-stone-500 dark:text-stone-400";
+        }
+        return `<span class="${cls}">${match}</span>`;
+      },
+    );
+  }
+
+  function setupJsonHighlight() {
+    const pairs: Array<[string, string]> = [
+      ["message", "message-backdrop"],
+      ["configuration", "configuration-backdrop"],
+      ["metadata", "metadata-backdrop"],
+    ];
+    for (const [areaId, backdropId] of pairs) {
+      const area = document.querySelector<HTMLTextAreaElement>(`#${areaId}`);
+      const backdrop = document.querySelector<HTMLElement>(`#${backdropId}`);
+      if (!area || !backdrop) continue;
+      const sync = () => {
+        backdrop.innerHTML = highlightJson(area.value);
+        backdrop.scrollTop = area.scrollTop;
+        backdrop.scrollLeft = area.scrollLeft;
+      };
+      area.addEventListener("input", sync);
+      area.addEventListener("scroll", sync);
+      sync();
+    }
+  }
 
   function readObject(id: string, required = false): JsonObject | undefined {
     const value = document.querySelector<HTMLTextAreaElement>(`#${id}`)?.value.trim() ?? "";
@@ -287,7 +344,9 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
         status.textContent = `Received ${labels[kind]}`;
         await wait(650);
 
-        output.textContent = JSON.stringify({ request, response: responseFor(kind) }, null, 2);
+        const pre = document.querySelector<HTMLElement>("#response-pre");
+        output.innerHTML = highlightJson(JSON.stringify({ request, response: responseFor(kind) }, null, 2));
+        if (pre) pre.scrollTop = 0;
         badge.textContent = labels[kind];
         badge.className = `rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${kind === "error" ? "bg-red-900 text-red-100" : "bg-green-900 text-green-100"}`;
         panel.classList.remove("hidden");
@@ -301,6 +360,9 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
     });
   }
 
-  document.addEventListener("astro:page-load", setupDemo);
+  document.addEventListener("astro:page-load", () => {
+    setupDemo();
+    setupJsonHighlight();
+  });
 </script>
 
