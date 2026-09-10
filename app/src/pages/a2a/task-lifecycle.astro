@@ -1,0 +1,450 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const controlClass =
+  "w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 font-mono text-sm text-stone-800 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200";
+
+const states = [
+  ["TASK_STATE_UNSPECIFIED", "No task", "unknown"],
+  ["TASK_STATE_SUBMITTED", "Acknowledged", "active"],
+  ["TASK_STATE_WORKING", "Processing", "active"],
+  ["TASK_STATE_INPUT_REQUIRED", "Needs input", "interrupted"],
+  ["TASK_STATE_AUTH_REQUIRED", "Needs auth", "interrupted"],
+  ["TASK_STATE_COMPLETED", "Succeeded", "terminal"],
+  ["TASK_STATE_FAILED", "Failed", "terminal"],
+  ["TASK_STATE_CANCELED", "Canceled", "terminal"],
+  ["TASK_STATE_REJECTED", "Rejected", "terminal"],
+] as const;
+---
+
+<BaseLayout title="A2A Task Lifecycle" activePage="">
+  <main id="task-demo" class="mx-auto max-w-5xl py-8">
+    <header class="mb-8 max-w-3xl">
+      <p class="mb-2 font-mono text-sm font-semibold text-green-700 dark:text-green-400">
+        A2A Protocol · 3.1.3 · 3.1.5 · 4.1.1
+      </p>
+      <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Task Lifecycle</h1>
+      <p class="mt-3 text-stone-600 dark:text-slate-300">
+        Create a task, poll it with <code>GetTask</code>, continue an interrupted turn, or
+        attempt to cancel it with <code>CancelTask</code>.
+      </p>
+    </header>
+
+    <section
+      class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="exchange-heading"
+    >
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 id="exchange-heading" class="text-lg font-semibold">Client ↔ server exchange</h2>
+        <p id="flow-status" class="text-sm text-stone-500 dark:text-slate-400" aria-live="polite">
+          No task yet
+        </p>
+      </div>
+
+      <svg
+        class="h-auto w-full"
+        viewBox="0 0 900 260"
+        role="img"
+        aria-labelledby="diagram-title diagram-description"
+      >
+        <title id="diagram-title">A2A task operation exchange</title>
+        <desc id="diagram-description">
+          A client agent sends task operations to a server agent, which returns a Task or an error.
+        </desc>
+        <defs>
+          <linearGradient id="lifecycle-client-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#86efac"></stop>
+            <stop offset="1" stop-color="#16a34a"></stop>
+          </linearGradient>
+          <linearGradient id="lifecycle-server-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#c4b5fd"></stop>
+            <stop offset="1" stop-color="#7c3aed"></stop>
+          </linearGradient>
+          <marker id="lifecycle-request-head" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#16a34a"></path>
+          </marker>
+          <marker id="lifecycle-response-head" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#7c3aed"></path>
+          </marker>
+        </defs>
+
+        <g aria-label="Client agent">
+          <path d="M55 65v125c0 18 38 32 85 32s85-14 85-32V65" fill="url(#lifecycle-client-fill)"></path>
+          <ellipse cx="140" cy="65" rx="85" ry="32" fill="#bbf7d0" stroke="#15803d" stroke-width="3"></ellipse>
+          <ellipse cx="140" cy="190" rx="85" ry="32" fill="#16a34a" stroke="#15803d" stroke-width="3"></ellipse>
+          <text x="140" y="122" text-anchor="middle" class="fill-green-950 text-2xl font-extrabold">Client</text>
+          <text x="140" y="147" text-anchor="middle" class="fill-green-900 text-[17px] font-semibold">agent</text>
+        </g>
+
+        <g aria-label="Server agent">
+          <path d="M675 65v125c0 18 38 32 85 32s85-14 85-32V65" fill="url(#lifecycle-server-fill)"></path>
+          <ellipse cx="760" cy="65" rx="85" ry="32" fill="#ddd6fe" stroke="#6d28d9" stroke-width="3"></ellipse>
+          <ellipse cx="760" cy="190" rx="85" ry="32" fill="#7c3aed" stroke="#6d28d9" stroke-width="3"></ellipse>
+          <text x="760" y="122" text-anchor="middle" class="fill-violet-950 text-2xl font-extrabold">Server</text>
+          <text x="760" y="147" text-anchor="middle" class="fill-violet-900 text-[17px] font-semibold">agent</text>
+        </g>
+
+        <g id="operation-arrow" class="opacity-0" aria-hidden="true">
+          <text id="operation-label" x="450" y="58" text-anchor="middle" class="fill-current font-mono text-base font-bold">GetTask</text>
+          <line class="[stroke-dasharray:430] [stroke-dashoffset:430]" x1="245" y1="78" x2="650" y2="78" stroke="#16a34a" stroke-width="5" marker-end="url(#lifecycle-request-head)"></line>
+        </g>
+        <g id="result-arrow" class="opacity-0" aria-hidden="true">
+          <text id="result-label" x="450" y="174" text-anchor="middle" class="fill-current font-mono text-base font-bold">Task</text>
+          <line class="[stroke-dasharray:430] [stroke-dashoffset:430]" x1="655" y1="150" x2="250" y2="150" stroke="#7c3aed" stroke-width="5" marker-end="url(#lifecycle-response-head)"></line>
+        </g>
+      </svg>
+    </section>
+
+    <section
+      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="states-heading"
+    >
+      <div class="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="font-mono text-sm font-semibold text-green-700 dark:text-green-400">4.1.3</p>
+          <h2 id="states-heading" class="text-xl font-semibold">TaskState</h2>
+        </div>
+        <span id="state-badge" class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-700 dark:bg-slate-700 dark:text-slate-200">
+          TASK_STATE_UNSPECIFIED
+        </span>
+      </div>
+
+      <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {states.map(([state, description, kind]) => (
+          <div
+            data-task-state={state}
+            class="rounded-xl border border-stone-200 bg-stone-50 p-3 transition dark:border-slate-700 dark:bg-slate-900"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <code class="break-all text-xs font-bold">{state.replace("TASK_STATE_", "")}</code>
+              <span
+                class:list={[
+                  "rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+                  kind === "terminal" && "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300",
+                  kind === "interrupted" && "bg-amber-100 text-amber-700 dark:bg-amber-950 dark:text-amber-300",
+                  kind === "active" && "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300",
+                  kind === "unknown" && "bg-stone-200 text-stone-600 dark:bg-slate-700 dark:text-slate-300",
+                ]}
+              >
+                {kind}
+              </span>
+            </div>
+            <p class="mt-1 text-xs text-stone-500 dark:text-slate-400">{description}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <section
+      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="controls-heading"
+    >
+      <div class="mb-5">
+        <p class="font-mono text-sm font-semibold text-green-700 dark:text-green-400">Simulation</p>
+        <h2 id="controls-heading" class="text-xl font-semibold">Drive the lifecycle</h2>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+        <label class="flex flex-col gap-1.5 sm:col-span-2">
+          <span class="font-bold">Initial message <small class="text-xs font-medium text-stone-500 dark:text-slate-400">Message.parts[0].text</small></span>
+          <input id="initial-message" class={controlClass} value="Plan a weekend in Kyoto" />
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="font-bold">Server path <small class="text-xs font-medium text-stone-500 dark:text-slate-400">demo control</small></span>
+          <select id="server-path" class={controlClass}>
+            <option value="complete">Complete</option>
+            <option value="input">Require input</option>
+            <option value="auth">Require auth</option>
+            <option value="fail">Fail</option>
+            <option value="reject">Reject</option>
+          </select>
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="font-bold"><code>tenant</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">string · optional</small></span>
+          <input id="tenant" class={controlClass} placeholder="acme" />
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="font-bold"><code>historyLength</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">integer · optional</small></span>
+          <input id="history-length" class={controlClass} type="number" min="0" placeholder="Unlimited" value="3" />
+        </label>
+      </div>
+
+      <div class="mt-5 flex flex-wrap gap-3 border-t border-stone-200 pt-5 dark:border-slate-700">
+        <button id="create-task" type="button" class="rounded-lg bg-green-700 px-4 py-2.5 font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-green-600 dark:hover:bg-green-500 dark:focus:ring-offset-slate-800">
+          Send Message
+        </button>
+        <button id="get-task" type="button" disabled class="rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-violet-600 dark:hover:bg-violet-500 dark:focus:ring-offset-slate-800">
+          Get Task
+        </button>
+        <button id="cancel-task" type="button" class="rounded-lg border border-red-300 bg-white px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:border-red-800 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950 dark:focus:ring-offset-slate-800">
+          Cancel Task
+        </button>
+        <button id="reset-task" type="button" class="rounded-lg border border-stone-300 bg-white px-4 py-2.5 font-semibold text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-800">
+          Reset
+        </button>
+      </div>
+
+      <form id="follow-up-form" class="mt-5 hidden rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
+        <label class="flex flex-col gap-1.5">
+          <span class="font-bold text-amber-900 dark:text-amber-200">The server needs more input</span>
+          <span class="text-sm text-amber-800 dark:text-amber-300">The follow-up Message reuses this task’s <code>taskId</code> and <code>contextId</code>.</span>
+          <input id="follow-up-message" class={controlClass} value="Two days, focused on food and temples" />
+        </label>
+        <button type="submit" class="mt-3 rounded-lg bg-amber-700 px-4 py-2.5 font-semibold text-white transition hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 dark:bg-amber-600 dark:hover:bg-amber-500 dark:focus:ring-offset-amber-950">
+          Send follow-up
+        </button>
+      </form>
+    </section>
+
+    <div class="mt-6 grid gap-6 lg:grid-cols-2">
+      <section class="min-w-0 rounded-2xl border border-stone-200 bg-stone-950 p-4 text-slate-100 shadow-sm sm:p-6" aria-labelledby="task-heading">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h2 id="task-heading" class="text-lg font-semibold">Current Task</h2>
+          <span class="font-mono text-xs text-slate-400">id · contextId · status · artifacts · history</span>
+        </div>
+        <pre class="max-h-[32rem] overflow-auto text-sm"><code id="task-json">null</code></pre>
+      </section>
+
+      <section class="min-w-0 rounded-2xl border border-stone-200 bg-stone-950 p-4 text-slate-100 shadow-sm sm:p-6" aria-labelledby="payload-heading">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h2 id="payload-heading" class="text-lg font-semibold">Last exchange</h2>
+          <span id="exchange-badge" class="rounded-full bg-slate-800 px-3 py-1 font-mono text-xs font-bold text-slate-300">None</span>
+        </div>
+        <pre class="max-h-[32rem] overflow-auto text-sm"><code id="exchange-json">Create a task to begin.</code></pre>
+      </section>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  type TaskState =
+    | "TASK_STATE_SUBMITTED"
+    | "TASK_STATE_WORKING"
+    | "TASK_STATE_COMPLETED"
+    | "TASK_STATE_FAILED"
+    | "TASK_STATE_CANCELED"
+    | "TASK_STATE_INPUT_REQUIRED"
+    | "TASK_STATE_REJECTED"
+    | "TASK_STATE_AUTH_REQUIRED";
+  type ServerPath = "complete" | "input" | "auth" | "fail" | "reject";
+
+  interface A2AMessage {
+    messageId: string;
+    contextId: string;
+    taskId: string;
+    role: "ROLE_USER" | "ROLE_AGENT";
+    parts: { text: string }[];
+  }
+
+  interface Task {
+    id: string;
+    contextId: string;
+    status: { state: TaskState; timestamp: string; message?: A2AMessage };
+    artifacts?: { artifactId: string; name: string; parts: { text: string }[] }[];
+    history: A2AMessage[];
+  }
+
+  const terminalStates = new Set<TaskState>([
+    "TASK_STATE_COMPLETED",
+    "TASK_STATE_FAILED",
+    "TASK_STATE_CANCELED",
+    "TASK_STATE_REJECTED",
+  ]);
+
+  function setupTaskDemo() {
+    const root = document.querySelector<HTMLElement>("#task-demo");
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = "true";
+
+    const find = <T extends Element>(selector: string) => root.querySelector<T>(selector)!;
+    const createButton = find<HTMLButtonElement>("#create-task");
+    const getButton = find<HTMLButtonElement>("#get-task");
+    const taskOutput = find<HTMLElement>("#task-json");
+    const exchangeOutput = find<HTMLElement>("#exchange-json");
+    const stateBadge = find<HTMLElement>("#state-badge");
+    const exchangeBadge = find<HTMLElement>("#exchange-badge");
+    const flowStatus = find<HTMLElement>("#flow-status");
+    const followUpForm = find<HTMLFormElement>("#follow-up-form");
+    const stateNodes = root.querySelectorAll<HTMLElement>("[data-task-state]");
+    let task: Task | undefined;
+    let serverPath: ServerPath = "complete";
+    const tenant = () => find<HTMLInputElement>("#tenant").value.trim();
+
+    const message = (role: A2AMessage["role"], text: string): A2AMessage => ({
+      messageId: crypto.randomUUID(),
+      contextId: task!.contextId,
+      taskId: task!.id,
+      role,
+      parts: [{ text }],
+    });
+
+    function showArrow(operation: string, result: "Task" | "Error") {
+      const operationArrow = find<SVGGElement>("#operation-arrow");
+      const resultArrow = find<SVGGElement>("#result-arrow");
+      find<SVGTextElement>("#operation-label").textContent = operation;
+      find<SVGTextElement>("#result-label").textContent = result;
+
+      for (const arrow of [operationArrow, resultArrow]) {
+        arrow.classList.remove("opacity-0");
+        arrow.setAttribute("aria-hidden", "false");
+        const line = arrow.querySelector<SVGLineElement>("line")!;
+        line.getAnimations().forEach((animation) => animation.cancel());
+        line.animate([{ strokeDashoffset: "430" }, { strokeDashoffset: "0" }], {
+          duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500,
+          easing: "ease-out",
+          fill: "forwards",
+        });
+      }
+    }
+
+    function setExchange(operation: string, request: object, response: object, result: "Task" | "Error" = "Task") {
+      showArrow(operation, result);
+      exchangeBadge.textContent = operation;
+      exchangeOutput.textContent = JSON.stringify({ request, response }, null, 2);
+      flowStatus.textContent = `${operation} → ${result}`;
+    }
+
+    function setState(state: TaskState, text?: string) {
+      if (!task) return;
+      task.status = {
+        state,
+        timestamp: new Date().toISOString(),
+        ...(text ? { message: message("ROLE_AGENT", text) } : {}),
+      };
+      if (text) task.history.push(task.status.message!);
+      render();
+    }
+
+    function taskForGet(historyLength?: number): Omit<Task, "history"> & { history?: A2AMessage[] } {
+      const { history, ...withoutHistory } = task!;
+      const snapshot: Omit<Task, "history"> & { history?: A2AMessage[] } = withoutHistory;
+      if (historyLength === undefined) snapshot.history = history;
+      else if (historyLength > 0) snapshot.history = history.slice(-historyLength);
+      return snapshot;
+    }
+
+    function render() {
+      const state = task?.status.state ?? "TASK_STATE_UNSPECIFIED";
+      taskOutput.textContent = task ? JSON.stringify(task, null, 2) : "null";
+      stateBadge.textContent = state;
+      flowStatus.textContent = task ? `${state.replace("TASK_STATE_", "")} · ${task.id.slice(0, 8)}` : "No task yet";
+      createButton.disabled = Boolean(task);
+      getButton.disabled =
+        !task ||
+        terminalStates.has(state as TaskState) ||
+        state === "TASK_STATE_INPUT_REQUIRED" ||
+        state === "TASK_STATE_AUTH_REQUIRED";
+      followUpForm.classList.toggle("hidden", state !== "TASK_STATE_INPUT_REQUIRED");
+
+      stateNodes.forEach((node) => {
+        const active = node.dataset.taskState === state;
+        node.classList.toggle("border-green-600", active);
+        node.classList.toggle("bg-green-50", active);
+        node.classList.toggle("ring-2", active);
+        node.classList.toggle("ring-green-200", active);
+        node.classList.toggle("dark:border-green-500", active);
+        node.classList.toggle("dark:bg-green-950/40", active);
+      });
+    }
+
+    createButton.addEventListener("click", () => {
+      const text = find<HTMLInputElement>("#initial-message").value.trim();
+      if (!text) return find<HTMLInputElement>("#initial-message").focus();
+      serverPath = find<HTMLSelectElement>("#server-path").value as ServerPath;
+      task = {
+        id: crypto.randomUUID(),
+        contextId: crypto.randomUUID(),
+        status: { state: "TASK_STATE_SUBMITTED", timestamp: new Date().toISOString() },
+        history: [],
+      };
+      const initialMessage = message("ROLE_USER", text);
+      task.history.push(initialMessage);
+      render();
+      setExchange(
+        "SendMessage",
+        { ...(tenant() ? { tenant: tenant() } : {}), message: initialMessage },
+        { task },
+      );
+    });
+
+    getButton.addEventListener("click", () => {
+      if (!task) return;
+      const rawLength = find<HTMLInputElement>("#history-length").value;
+      const historyLength = rawLength === "" ? undefined : Number(rawLength);
+      const request = {
+        ...(tenant() ? { tenant: tenant() } : {}),
+        id: task.id,
+        ...(historyLength === undefined ? {} : { historyLength }),
+      };
+
+      if (task.status.state === "TASK_STATE_SUBMITTED") {
+        if (serverPath === "reject") setState("TASK_STATE_REJECTED", "The agent declined this task.");
+        else setState("TASK_STATE_WORKING", "The agent is processing the request.");
+      } else if (task.status.state === "TASK_STATE_WORKING") {
+        if (serverPath === "input") {
+          setState("TASK_STATE_INPUT_REQUIRED", "How many days should the itinerary cover?");
+        } else if (serverPath === "auth") {
+          setState("TASK_STATE_AUTH_REQUIRED", "Authorization is required before continuing.");
+        } else if (serverPath === "fail") {
+          setState("TASK_STATE_FAILED", "The agent could not complete the task.");
+        } else {
+          task.artifacts = [{
+            artifactId: crypto.randomUUID(),
+            name: "Kyoto itinerary",
+            parts: [{ text: "Day 1: Higashiyama and Gion. Day 2: Arashiyama and Nishiki Market." }],
+          }];
+          setState("TASK_STATE_COMPLETED");
+        }
+      }
+
+      setExchange("GetTask", request, { task: taskForGet(historyLength) });
+    });
+
+    find<HTMLButtonElement>("#cancel-task").addEventListener("click", () => {
+      const request = {
+        ...(tenant() ? { tenant: tenant() } : {}),
+        id: task?.id ?? "missing-task-id",
+        metadata: { reason: "user_request" },
+      };
+      if (!task) {
+        setExchange("CancelTask", request, { error: { code: "TaskNotFoundError", message: "The task does not exist." } }, "Error");
+      } else if (terminalStates.has(task.status.state)) {
+        setExchange("CancelTask", request, { error: { code: "TaskNotCancelableError", message: `A task in ${task.status.state} cannot be canceled.` } }, "Error");
+      } else {
+        setState("TASK_STATE_CANCELED");
+        setExchange("CancelTask", request, { task });
+      }
+    });
+
+    followUpForm.addEventListener("submit", (event) => {
+      event.preventDefault();
+      if (!task || task.status.state !== "TASK_STATE_INPUT_REQUIRED") return;
+      const text = find<HTMLInputElement>("#follow-up-message").value.trim();
+      if (!text) return find<HTMLInputElement>("#follow-up-message").focus();
+      const followUp = message("ROLE_USER", text);
+      task.history.push(followUp);
+      serverPath = "complete";
+      setState("TASK_STATE_WORKING", "The agent resumed work with the new input.");
+      setExchange(
+        "SendMessage",
+        { ...(tenant() ? { tenant: tenant() } : {}), message: followUp },
+        { task },
+      );
+    });
+
+    find<HTMLButtonElement>("#reset-task").addEventListener("click", () => {
+      task = undefined;
+      exchangeBadge.textContent = "None";
+      exchangeOutput.textContent = "Create a task to begin.";
+      for (const arrow of [find("#operation-arrow"), find("#result-arrow")]) {
+        arrow.classList.add("opacity-0");
+        arrow.setAttribute("aria-hidden", "true");
+      }
+      render();
+    });
+
+    render();
+  }
+
+  document.addEventListener("astro:page-load", setupTaskDemo);
+</script>
