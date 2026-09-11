@@ -198,6 +198,33 @@ function positionPopover(state: PopoverState): void {
   const top = Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - el.offsetHeight - 8));
   el.style.left = `${left}px`;
   el.style.top = `${top}px`;
+
+  // Mask the parts of the popover that fall outside the scrolling panel,
+  // so it appears to slide under the panel edges with its anchor text.
+  let clipper: Element | null = null;
+  let ancestor: Element | null = state.anchor.parentElement;
+  while (ancestor && ancestor !== document.body) {
+    const style = getComputedStyle(ancestor);
+    if (/(auto|scroll)/.test(style.overflowY) && ancestor.scrollHeight > ancestor.clientHeight) {
+      clipper = ancestor;
+      break;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  if (!clipper) {
+    el.style.clipPath = "";
+    return;
+  }
+  const panel = clipper.getBoundingClientRect();
+  const box = el.getBoundingClientRect();
+  const clipTop = Math.max(0, panel.top - box.top);
+  const clipRight = Math.max(0, box.right - panel.right);
+  const clipBottom = Math.max(0, box.bottom - panel.bottom);
+  const clipLeft = Math.max(0, panel.left - box.left);
+  el.style.clipPath =
+    clipTop || clipRight || clipBottom || clipLeft
+      ? `inset(${clipTop}px ${clipRight}px ${clipBottom}px ${clipLeft}px)`
+      : "";
 }
 
 function showPopover(state: PopoverState): void {
