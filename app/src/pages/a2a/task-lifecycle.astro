@@ -630,10 +630,10 @@ const states = [
       }
     });
 
-    const resumeServer = (statusText: string) => {
+    const resumeServer = (statusText: string, syncClient: boolean) => {
       serverPath = "complete";
       setState("TASK_STATE_WORKING", statusText);
-      task = structuredClone(serverTask!);
+      if (syncClient) task = structuredClone(serverTask!);
       render();
     };
 
@@ -644,7 +644,7 @@ const states = [
       if (!text) return find<HTMLInputElement>("#follow-up-message").focus();
       const followUp = message("ROLE_USER", text);
       serverTask.history.push(followUp);
-      resumeServer("The agent resumed work with the new input.");
+      resumeServer("The agent resumed work with the new input.", true);
       setOperation(
         "SendMessage",
         "SendMessageRequest",
@@ -660,7 +660,7 @@ const states = [
       if (!credential) return find<HTMLInputElement>("#auth-credential").focus();
       const followUp = message("ROLE_USER", `Credential: ${credential}`);
       serverTask.history.push(followUp);
-      resumeServer("The agent received the credential and resumed work.");
+      resumeServer("The agent received the credential and resumed work.", true);
       setOperation(
         "SendMessage",
         "SendMessageRequest",
@@ -672,7 +672,7 @@ const states = [
 
     find<HTMLButtonElement>("#auth-oob").addEventListener("click", () => {
       if (!serverTask || serverTask.status.state !== "TASK_STATE_AUTH_REQUIRED") return;
-      resumeServer("The agent received the credential out-of-band and resumed work.");
+      resumeServer("The agent received the credential out-of-band and resumed work.", false);
       flowStatus.textContent = "Out-of-band authorization received — poll Get Task to discover the new state";
     });
 
