@@ -195,12 +195,11 @@ function positionPopover(state: PopoverState): void {
   const rect = state.anchor.getBoundingClientRect();
   const el = state.el;
   const left = Math.max(8, Math.min(rect.left, window.innerWidth - el.offsetWidth - 8));
-  const top = Math.max(8, Math.min(rect.bottom + 6, window.innerHeight - el.offsetHeight - 8));
   el.style.left = `${left}px`;
-  el.style.top = `${top}px`;
+  el.style.top = `${rect.bottom + 6}px`;
 
-  // Mask the parts of the popover that fall outside the scrolling panel,
-  // so it appears to slide under the panel edges with its anchor text.
+  // Mask the parts of the popover that fall outside the scrolling panel or the
+  // viewport, so it appears to slide under the edges together with its anchor.
   let clipper: Element | null = null;
   let ancestor: Element | null = state.anchor.parentElement;
   while (ancestor && ancestor !== document.body) {
@@ -211,19 +210,36 @@ function positionPopover(state: PopoverState): void {
     }
     ancestor = ancestor.parentElement;
   }
-  if (!clipper) {
-    el.style.clipPath = "";
-    return;
-  }
-  const panel = clipper.getBoundingClientRect();
+
   const box = el.getBoundingClientRect();
-  const clipTop = Math.max(0, panel.top - box.top);
-  const clipRight = Math.max(0, box.right - panel.right);
-  const clipBottom = Math.max(0, box.bottom - panel.bottom);
-  const clipLeft = Math.max(0, panel.left - box.left);
+  const bounds: Array<DOMRect | typeof box> = [
+    {
+      top: 0,
+      left: 0,
+      right: window.innerWidth,
+      bottom: window.innerHeight,
+      width: 0,
+      height: 0,
+      x: 0,
+      y: 0,
+      toJSON: () => ({}),
+    },
+  ];
+  if (clipper) bounds.push(clipper.getBoundingClientRect());
+
+  let clipTop = 0;
+  let clipRight = 0;
+  let clipBottom = 0;
+  let clipLeft = 0;
+  for (const bound of bounds) {
+    clipTop = Math.max(clipTop, bound.top - box.top);
+    clipRight = Math.max(clipRight, box.right - bound.right);
+    clipBottom = Math.max(clipBottom, box.bottom - bound.bottom);
+    clipLeft = Math.max(clipLeft, bound.left - box.left);
+  }
   el.style.clipPath =
     clipTop || clipRight || clipBottom || clipLeft
-      ? `inset(${clipTop}px ${clipRight}px ${clipBottom}px ${clipLeft}px)`
+      ? `inset(${Math.max(0, clipTop)}px ${Math.max(0, clipRight)}px ${Math.max(0, clipBottom)}px ${Math.max(0, clipLeft)}px)`
       : "";
 }
 
