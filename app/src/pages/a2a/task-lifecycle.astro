@@ -521,10 +521,16 @@ const states = [
         serverState === "TASK_STATE_INPUT_REQUIRED" ||
         serverState === "TASK_STATE_AUTH_REQUIRED";
       getButton.disabled = !task;
-      const interrupted = state === "TASK_STATE_INPUT_REQUIRED" || state === "TASK_STATE_AUTH_REQUIRED";
-      followUpForm.classList.toggle("hidden", !interrupted);
+      const clientInterrupted = state === "TASK_STATE_INPUT_REQUIRED" || state === "TASK_STATE_AUTH_REQUIRED";
+      followUpForm.classList.toggle(
+        "hidden",
+        !clientInterrupted && serverState !== "TASK_STATE_AUTH_REQUIRED",
+      );
       find<HTMLElement>("#follow-up-input").classList.toggle("hidden", state !== "TASK_STATE_INPUT_REQUIRED");
-      find<HTMLElement>("#auth-options").classList.toggle("hidden", state !== "TASK_STATE_AUTH_REQUIRED");
+      find<HTMLElement>("#auth-options").classList.toggle(
+        "hidden",
+        serverState !== "TASK_STATE_AUTH_REQUIRED",
+      );
       find<HTMLElement>("#follow-up-title").textContent =
         state === "TASK_STATE_AUTH_REQUIRED" ? "The server needs authorization" : "The server needs more input";
 
