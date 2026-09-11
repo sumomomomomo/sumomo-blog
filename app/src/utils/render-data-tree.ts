@@ -194,7 +194,8 @@ const specObjects: Record<string, SpecRef> = {
     name: "TaskNotCancelableError",
     kind: "Error",
     section: "3.3.2",
-    description: "The task is not in a cancelable state (e.g., already completed, failed, or canceled).",
+    description:
+      "The task is not in a cancelable state (e.g., already completed, failed, or canceled).",
   },
   // Well-known or scalar spec types without object semantics
   timestamp: { name: "Timestamp", kind: "", section: "", type: "timestamp" },
