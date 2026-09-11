@@ -15,15 +15,14 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
   node.setAttribute("aria-label", `${label}: ${valueType(value)}`);
 
   const header = document.createElement("div");
-  header.className = "flex items-center justify-between gap-2";
+  header.className = "flex items-baseline gap-2";
 
   const name = document.createElement("span");
   name.className = "break-all font-mono text-xs font-bold text-sky-700 dark:text-sky-300";
   name.textContent = label;
 
   const type = document.createElement("span");
-  type.className =
-    "shrink-0 rounded-full bg-stone-200 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-stone-500 dark:bg-slate-800 dark:text-slate-400";
+  type.className = "text-xs text-stone-500 dark:text-slate-400";
   type.textContent = valueType(value);
   header.append(name, type);
   node.append(header);

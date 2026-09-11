@@ -3,6 +3,7 @@ import BaseLayout from "../../layouts/BaseLayout.astro";
 
 const fieldClass = "flex flex-col gap-1.5";
 const fieldTypeClass = "text-xs font-medium text-stone-500 dark:text-slate-400";
+const fieldRequiredClass = "font-bold text-red-600 dark:text-red-400";
 const controlClass =
   "w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 font-mono text-sm text-stone-800 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200";
 const objectBoxClass =
@@ -115,15 +116,15 @@ const nestedBoxClass =
 
           <fieldset class={`${nestedBoxClass} sm:col-span-2`}>
             <legend class="px-1 font-bold">
-              <code>message</code> <small class={fieldTypeClass}>Message · required</small>
+              <code>message</code> <small class={fieldTypeClass}>Message · <span class={fieldRequiredClass}>required</span></small>
             </legend>
             <div class="grid gap-3 sm:grid-cols-2">
               <label class={`${nestedBoxClass} ${fieldClass}`}>
-                <span class="font-bold"><code>messageId</code> <small class={fieldTypeClass}>string · required</small></span>
+                <span class="font-bold"><code>messageId</code> <small class={fieldTypeClass}>string · <span class={fieldRequiredClass}>required</span></small></span>
                 <input class={controlClass} id="message-id" value="msg-001" required />
               </label>
               <label class={`${nestedBoxClass} ${fieldClass}`}>
-                <span class="font-bold"><code>role</code> <small class={fieldTypeClass}>Role · required</small></span>
+                <span class="font-bold"><code>role</code> <small class={fieldTypeClass}>Role · <span class={fieldRequiredClass}>required</span></small></span>
                 <select class={controlClass} id="message-role">
                   <option value="ROLE_USER">ROLE_USER</option>
                 </select>
@@ -131,7 +132,7 @@ const nestedBoxClass =
 
               <fieldset class={`${nestedBoxClass} sm:col-span-2`}>
                 <legend class="px-1 font-bold">
-                  <code>parts</code> <small class={fieldTypeClass}>Part[] · required</small>
+                  <code>parts</code> <small class={fieldTypeClass}>Part[] · <span class={fieldRequiredClass}>required</span></small>
                 </legend>
                 <div class={nestedBoxClass}>
                   <div class="mb-2 flex items-center justify-between gap-2">
