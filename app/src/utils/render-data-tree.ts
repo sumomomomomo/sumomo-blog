@@ -8,8 +8,9 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
   const node = document.createElement("div");
   node.className =
     depth === 0
-      ? "rounded-xl border-2 border-stone-300 bg-stone-50 p-3 transition-[filter] hover:brightness-[0.92] dark:border-slate-600 dark:bg-slate-900"
-      : "rounded-lg border border-stone-200 bg-white/70 p-2.5 transition-[filter] hover:brightness-[0.92] dark:border-slate-700 dark:bg-slate-950/70";
+      ? "rounded-xl border-2 border-stone-300 bg-stone-50 p-3 transition-[filter] dark:border-slate-600 dark:bg-slate-900"
+      : "rounded-lg border border-stone-200 bg-white/70 p-2.5 transition-[filter] dark:border-slate-700 dark:bg-slate-950/70";
+  node.dataset.treeNode = "";
   node.dataset.treeKind = valueType(value).split(" · ")[0];
   node.setAttribute("role", "group");
   node.setAttribute("aria-label", `${label}: ${valueType(value)}`);
@@ -60,6 +61,22 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
   return node;
 }
 
-export function renderDataTree(container: Element, value: unknown, label: string): void {
+export function renderDataTree(container: HTMLElement, value: unknown, label: string): void {
   container.replaceChildren(makeNode(label, value));
+
+  // Darken only the innermost box under the cursor; ancestors stay normal.
+  if (!container.dataset.treeHoverBound) {
+    container.dataset.treeHoverBound = "true";
+    const clear = () => {
+      for (const node of container.querySelectorAll("[data-tree-node]")) {
+        node.classList.remove("brightness-[0.92]");
+      }
+    };
+    container.addEventListener("mouseover", (event) => {
+      clear();
+      const innermost = (event.target as Element).closest("[data-tree-node]");
+      innermost?.classList.add("brightness-[0.92]");
+    });
+    container.addEventListener("mouseleave", clear);
+  }
 }
