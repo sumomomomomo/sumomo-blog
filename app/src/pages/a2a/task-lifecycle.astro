@@ -21,7 +21,7 @@ const states = [
   <main id="task-demo" class="mx-auto max-w-5xl py-8">
     <header class="mb-8 max-w-3xl">
       <p class="mb-2 font-mono text-sm font-semibold text-green-700 dark:text-green-400">
-        A2A Protocol · 3.1.3 · 3.1.5 · 4.1.1
+        A2A Protocol · 3.1.1 · 3.1.3 · 3.1.5 · 4.1.1 · 4.1.3
       </p>
       <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Task Lifecycle</h1>
       <p class="mt-3 text-stone-600 dark:text-slate-300">
@@ -32,6 +32,90 @@ const states = [
 
     <section
       class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="guide-heading"
+    >
+      <div class="mb-4">
+        <p class="font-mono text-sm font-semibold text-green-700 dark:text-green-400">Guide</p>
+        <h2 id="guide-heading" class="text-xl font-semibold">What the controls do</h2>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+          <p class="font-bold"><code>Send Message</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400"><span data-spec="sendmessage">SendMessage</span></small></p>
+          <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
+            Sends a <code><span data-spec="sendmessagerequest">SendMessageRequest</span></code>
+            containing your initial <span data-spec="message">Message</span>. The simulated server
+            creates a <span data-spec="task">Task</span> in <code>TASK_STATE_SUBMITTED</code> and
+            returns it inside a
+            <span data-spec="sendmessageresponse">SendMessageResponse</span>. Note: this demo
+            behaves as if <code>return_immediately: true</code> — by default
+            <code>SendMessage</code> blocks until the task reaches a terminal or interrupted state
+            (3.2.2).
+          </p>
+        </div>
+        <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+          <p class="font-bold"><code>Server Works on Task</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">demo control</small></p>
+          <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
+            Simulates the server agent doing work: advancing the
+            <span data-spec="task">Task</span> along its lifecycle, possibly producing artifacts or
+            a status <span data-spec="message">Message</span>. This is not a protocol operation —
+            on a real server, progress happens independently of the client.
+          </p>
+        </div>
+        <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+          <p class="font-bold"><code>Get Task</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400"><span data-spec="gettask">GetTask</span></small></p>
+          <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
+            Sends a <code><span data-spec="gettaskrequest">GetTaskRequest</span></code> and
+            receives the <span data-spec="task">Task</span> directly, exactly as the server
+            currently holds it — the state may be unchanged from the last poll.
+            <span data-spec="historylength">historyLength?</span> controls how much history comes
+            back.
+          </p>
+        </div>
+        <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+          <p class="font-bold"><code>Cancel Task</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400"><span data-spec="canceltask">CancelTask</span></small></p>
+          <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
+            Sends a <code><span data-spec="canceltaskrequest">CancelTaskRequest</span></code>. The
+            server returns the updated <span data-spec="task">Task</span> with
+            <span data-spec="state">TaskState</span> of
+            <code>TASK_STATE_CANCELED</code>, or an error such as
+            <span data-spec="tasknotcancelableerror">TaskNotCancelableError</span> if the task is
+            already terminal.
+          </p>
+        </div>
+        <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+          <p class="font-bold">Reset <small class="text-xs font-medium text-stone-500 dark:text-slate-400">demo control</small></p>
+          <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
+            Clears the client's local state and both exchange trees so you can start over. This is
+            a demo control, not an A2A protocol operation.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-3 grid gap-3 sm:grid-cols-2">
+        <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+          <p class="font-bold">Current Task</p>
+          <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
+            The client's local view of the <span data-spec="task">Task</span> — the latest state it
+            has received from the server, including status, artifacts, and history. It can lag the
+            server's actual state between polls.
+          </p>
+        </div>
+        <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+          <p class="font-bold">Last exchange</p>
+          <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
+            The most recent request and response, rendered as spec objects: e.g.
+            <code><span data-spec="sendmessagerequest">SendMessageRequest</span></code> →
+            <span data-spec="sendmessageresponse">SendMessageResponse</span>, or
+            <code><span data-spec="gettaskrequest">GetTaskRequest</span></code> →
+            <span data-spec="task">Task</span>. Hover any underlined label for its definition.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section
+      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
       aria-labelledby="exchange-heading"
     >
       <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
@@ -133,6 +217,17 @@ const states = [
           </div>
         ))}
       </div>
+
+      <p class="mt-4 text-xs text-stone-500 dark:text-slate-400">
+        <span class="mr-4 inline-flex items-center gap-1.5">
+          <span class="inline-block h-3 w-3 rounded border-2 border-green-600 bg-green-50 dark:border-green-500 dark:bg-green-950/40"></span>
+          green border = state as seen by client
+        </span>
+        <span class="inline-flex items-center gap-1.5">
+          <span class="inline-block h-3 w-3 rounded bg-stone-200 dark:bg-slate-600"></span>
+          darker shade = true state of task as seen by server
+        </span>
+      </p>
     </section>
 
     <section
@@ -144,9 +239,9 @@ const states = [
         <h2 id="controls-heading" class="text-xl font-semibold">Drive the lifecycle</h2>
       </div>
 
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <label class="flex flex-col gap-1.5 sm:col-span-2">
-          <span class="font-bold">Initial message <small class="text-xs font-medium text-stone-500 dark:text-slate-400">Message.parts[0].text</small></span>
+          <span class="font-bold">Initial message <small class="text-xs font-medium text-stone-500 dark:text-slate-400"><span data-spec="message">Message</span>.parts[0].text</small></span>
           <input id="initial-message" class={controlClass} value="Plan a weekend in Kyoto" />
         </label>
         <label class="flex flex-col gap-1.5">
@@ -160,63 +255,113 @@ const states = [
           </select>
         </label>
         <label class="flex flex-col gap-1.5">
-          <span class="font-bold"><code>tenant</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">string · optional</small></span>
-          <input id="tenant" class={controlClass} placeholder="acme" />
-        </label>
-        <label class="flex flex-col gap-1.5">
-          <span class="font-bold"><code>historyLength</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">integer · optional</small></span>
+          <span class="font-bold"><code><span data-spec="historylength">historyLength</span></code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">integer?</small></span>
           <input id="history-length" class={controlClass} type="number" min="0" placeholder="Unlimited" value="3" />
         </label>
       </div>
 
-      <div class="mt-5 flex flex-wrap gap-3 border-t border-stone-200 pt-5 dark:border-slate-700">
-        <button id="create-task" type="button" class="rounded-lg bg-green-700 px-4 py-2.5 font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-green-600 dark:hover:bg-green-500 dark:focus:ring-offset-slate-800">
-          Send Message
-        </button>
-        <button id="get-task" type="button" disabled class="rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-violet-600 dark:hover:bg-violet-500 dark:focus:ring-offset-slate-800">
-          Get Task
-        </button>
-        <button id="cancel-task" type="button" class="rounded-lg border border-red-300 bg-white px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:border-red-800 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950 dark:focus:ring-offset-slate-800">
-          Cancel Task
-        </button>
-        <button id="reset-task" type="button" class="rounded-lg border border-stone-300 bg-white px-4 py-2.5 font-semibold text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-800">
-          Reset
-        </button>
-      </div>
 
       <form id="follow-up-form" class="mt-5 hidden rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
-        <label class="flex flex-col gap-1.5">
-          <span class="font-bold text-amber-900 dark:text-amber-200">The server needs more input</span>
-          <span class="text-sm text-amber-800 dark:text-amber-300">The follow-up Message reuses this task’s <code>taskId</code> and <code>contextId</code>.</span>
-          <input id="follow-up-message" class={controlClass} value="Two days, focused on food and temples" />
-        </label>
-        <button type="submit" class="mt-3 rounded-lg bg-amber-700 px-4 py-2.5 font-semibold text-white transition hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 dark:bg-amber-600 dark:hover:bg-amber-500 dark:focus:ring-offset-amber-950">
-          Send follow-up
-        </button>
+        <div id="follow-up-input">
+          <label class="flex flex-col gap-1.5">
+            <span id="follow-up-title" class="font-bold text-amber-900 dark:text-amber-200">The server needs more input</span>
+            <span class="text-sm text-amber-800 dark:text-amber-300">The follow-up Message reuses this task’s <code>taskId</code> and <code>contextId</code>.</span>
+            <input id="follow-up-message" class={controlClass} value="Two days, focused on food and temples" />
+          </label>
+          <button type="submit" class="mt-3 rounded-lg bg-amber-700 px-4 py-2.5 font-semibold text-white transition hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 dark:bg-amber-600 dark:hover:bg-amber-500 dark:focus:ring-offset-amber-950">
+            Send follow-up
+          </button>
+        </div>
+        <div id="auth-options" class="hidden">
+          <p id="auth-title" class="font-bold text-amber-900 dark:text-amber-200">The server needs authorization</p>
+          <p class="mt-1 text-sm text-amber-800 dark:text-amber-300">
+            Per 7.6.2, the client may send a Message to negotiate the request, or fulfill the
+            authorization out-of-band — in which case the server resumes on its own.
+          </p>
+          <div id="auth-inband" class="hidden">
+            <label class="mt-3 flex flex-col gap-1.5">
+              <span class="text-sm font-semibold text-amber-900 dark:text-amber-200">Option 1: in-band — send a credential Message</span>
+              <input id="auth-credential" class={controlClass} value="Bearer eyJhbGciOi..." />
+            </label>
+            <button id="auth-send" type="button" class="mt-2 rounded-lg bg-amber-700 px-4 py-2.5 font-semibold text-white transition hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 dark:bg-amber-600 dark:hover:bg-amber-500 dark:focus:ring-offset-amber-950">
+              Send credential Message
+            </button>
+          </div>
+          <div class="mt-4 border-t border-amber-300 pt-3 dark:border-amber-800">
+            <span class="text-sm font-semibold text-amber-900 dark:text-amber-200">Option 2: out-of-band — the agent receives the credential directly</span>
+            <button id="auth-oob" type="button" class="mt-2 block rounded-lg border border-amber-700 bg-transparent px-4 py-2.5 font-semibold text-amber-800 transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-600 dark:border-amber-600 dark:text-amber-200 dark:hover:bg-amber-900/40">
+              Simulate out-of-band authorization
+            </button>
+            <p class="mt-1 text-xs text-amber-700 dark:text-amber-400">No client Message is sent; the server continues by itself. Poll Get Task to discover the new state.</p>
+          </div>
+        </div>
       </form>
     </section>
 
-    <div class="mt-6 grid gap-6 lg:grid-cols-2">
-      <section class="min-w-0 rounded-2xl border border-stone-200 bg-stone-950 p-4 text-slate-100 shadow-sm sm:p-6" aria-labelledby="task-heading">
+    <div
+      id="floating-actions"
+      class="fixed bottom-4 left-4 z-40 flex w-max max-w-[calc(100vw-1rem)] flex-wrap gap-3 rounded-xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur cursor-move [&_button]:cursor-pointer dark:border-slate-700 dark:bg-slate-900/95"
+    >
+      <button id="create-task" type="button" class="rounded-lg bg-green-700 px-4 py-2.5 font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-green-600 dark:hover:bg-green-500 dark:focus:ring-offset-slate-800">
+        Send Message
+      </button>
+      <button id="server-works" type="button" disabled class="rounded-lg bg-amber-700 px-4 py-2.5 font-semibold text-white transition hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-amber-600 dark:hover:bg-amber-500 dark:focus:ring-offset-slate-800">
+        Server Works on Task
+      </button>
+      <button id="get-task" type="button" disabled class="rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-violet-600 dark:hover:bg-violet-500 dark:focus:ring-offset-slate-800">
+        Get Task
+      </button>
+      <button id="cancel-task" type="button" class="rounded-lg border border-red-300 bg-white px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:border-red-800 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950 dark:focus:ring-offset-slate-800">
+        Cancel Task
+      </button>
+      <button id="reset-task" type="button" class="rounded-lg border border-stone-300 bg-white px-4 py-2.5 font-semibold text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-800">
+        Reset
+      </button>
+    </div>
+
+    <div class="mt-6 flex flex-col gap-6">
+      <section class="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-stone-800 shadow-sm dark:border-slate-700 dark:bg-stone-950 dark:text-slate-100 sm:p-6" aria-labelledby="task-heading">
         <div class="mb-3 flex items-center justify-between gap-3">
           <h2 id="task-heading" class="text-lg font-semibold">Current Task</h2>
-          <span class="font-mono text-xs text-slate-400">id · contextId · status · artifacts · history</span>
+          <span class="font-mono text-xs text-stone-500 dark:text-slate-400">id · contextId · status · artifacts · history</span>
         </div>
-        <pre class="max-h-[32rem] overflow-auto text-sm"><code id="task-json">null</code></pre>
+        <div id="task-tree" class="max-h-[32rem] overflow-auto font-mono text-sm text-slate-400">
+          No task yet.
+        </div>
       </section>
 
-      <section class="min-w-0 rounded-2xl border border-stone-200 bg-stone-950 p-4 text-slate-100 shadow-sm sm:p-6" aria-labelledby="payload-heading">
+      <section class="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-stone-800 shadow-sm dark:border-slate-700 dark:bg-stone-950 dark:text-slate-100 sm:p-6" aria-labelledby="payload-heading">
         <div class="mb-3 flex items-center justify-between gap-3">
           <h2 id="payload-heading" class="text-lg font-semibold">Last exchange</h2>
-          <span id="exchange-badge" class="rounded-full bg-slate-800 px-3 py-1 font-mono text-xs font-bold text-slate-300">None</span>
+          <span id="exchange-badge" class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-600 dark:bg-slate-800 dark:text-slate-300">None</span>
         </div>
-        <pre class="max-h-[32rem] overflow-auto text-sm"><code id="exchange-json">Create a task to begin.</code></pre>
+        <div class="grid gap-4 lg:grid-cols-2">
+          <section class="min-w-0">
+            <p class="mb-2 font-mono text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Client → Server</p>
+            <div id="request-tree" class="max-h-[32rem] overflow-auto font-mono text-sm text-slate-400">
+              Create a task to begin.
+            </div>
+          </section>
+          <section class="min-w-0">
+            <p class="mb-2 font-mono text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Server → Client</p>
+            <div id="response-tree" class="max-h-[32rem] overflow-auto font-mono text-sm text-slate-400">
+              Create a task to begin.
+            </div>
+          </section>
+        </div>
       </section>
     </div>
   </main>
 </BaseLayout>
 
 <script>
+  import {
+    clearSpecPopovers,
+    renderDataTree,
+    setupSpecPopovers,
+  } from "../../utils/render-data-tree";
+  import { randomUuid } from "../../utils/random-uuid";
+
   type TaskState =
     | "TASK_STATE_SUBMITTED"
     | "TASK_STATE_WORKING"
@@ -259,21 +404,22 @@ const states = [
     const find = <T extends Element>(selector: string) => root.querySelector<T>(selector)!;
     const createButton = find<HTMLButtonElement>("#create-task");
     const getButton = find<HTMLButtonElement>("#get-task");
-    const taskOutput = find<HTMLElement>("#task-json");
-    const exchangeOutput = find<HTMLElement>("#exchange-json");
+    const serverWorksButton = find<HTMLButtonElement>("#server-works");
+    const taskOutput = find<HTMLElement>("#task-tree");
+    const requestOutput = find<HTMLElement>("#request-tree");
+    const responseOutput = find<HTMLElement>("#response-tree");
     const stateBadge = find<HTMLElement>("#state-badge");
     const exchangeBadge = find<HTMLElement>("#exchange-badge");
     const flowStatus = find<HTMLElement>("#flow-status");
     const followUpForm = find<HTMLFormElement>("#follow-up-form");
     const stateNodes = root.querySelectorAll<HTMLElement>("[data-task-state]");
+    let serverTask: Task | undefined;
     let task: Task | undefined;
     let serverPath: ServerPath = "complete";
-    const tenant = () => find<HTMLInputElement>("#tenant").value.trim();
-
     const message = (role: A2AMessage["role"], text: string): A2AMessage => ({
-      messageId: crypto.randomUUID(),
-      contextId: task!.contextId,
-      taskId: task!.id,
+      messageId: randomUuid(),
+      contextId: serverTask!.contextId,
+      taskId: serverTask!.id,
       role,
       parts: [{ text }],
     });
@@ -297,44 +443,99 @@ const states = [
       }
     }
 
-    function setExchange(operation: string, request: object, response: object, result: "Task" | "Error" = "Task") {
+    function setOperation(
+      operation: string,
+      requestType: string,
+      request: object,
+      responseType: string,
+      response: object,
+      result: "Task" | "Error" = "Task",
+    ) {
       showArrow(operation, result);
       exchangeBadge.textContent = operation;
-      exchangeOutput.textContent = JSON.stringify({ request, response }, null, 2);
+      renderDataTree(requestOutput, request, requestType);
+      renderDataTree(responseOutput, response, responseType);
       flowStatus.textContent = `${operation} → ${result}`;
     }
 
     function setState(state: TaskState, text?: string) {
-      if (!task) return;
-      task.status = {
+      if (!serverTask) return;
+      serverTask.status = {
         state,
         timestamp: new Date().toISOString(),
         ...(text ? { message: message("ROLE_AGENT", text) } : {}),
       };
-      if (text) task.history.push(task.status.message!);
-      render();
+      if (text) serverTask.history.push(serverTask.status.message!);
     }
 
     function taskForGet(historyLength?: number): Omit<Task, "history"> & { history?: A2AMessage[] } {
-      const { history, ...withoutHistory } = task!;
+      const { history, ...withoutHistory } = structuredClone(serverTask!);
       const snapshot: Omit<Task, "history"> & { history?: A2AMessage[] } = withoutHistory;
       if (historyLength === undefined) snapshot.history = history;
       else if (historyLength > 0) snapshot.history = history.slice(-historyLength);
       return snapshot;
     }
 
+    const floatingBar = find<HTMLElement>("#floating-actions");
+    let dragState: { startX: number; startY: number; origLeft: number; origTop: number } | null = null;
+    floatingBar.addEventListener("pointerdown", (event) => {
+      if ((event.target as HTMLElement).closest("button")) return;
+      const rect = floatingBar.getBoundingClientRect();
+      dragState = { startX: event.clientX, startY: event.clientY, origLeft: rect.left, origTop: rect.top };
+      floatingBar.style.bottom = "auto";
+      floatingBar.style.left = `${rect.left}px`;
+      floatingBar.style.top = `${rect.top}px`;
+      floatingBar.style.cursor = "grabbing";
+      floatingBar.style.touchAction = "none";
+      floatingBar.setPointerCapture(event.pointerId);
+    });
+    floatingBar.addEventListener("pointermove", (event) => {
+      if (!dragState) return;
+      const left = dragState.origLeft + (event.clientX - dragState.startX);
+      const top = dragState.origTop + (event.clientY - dragState.startY);
+      floatingBar.style.left = `${Math.max(8, Math.min(left, window.innerWidth - floatingBar.offsetWidth - 8))}px`;
+      floatingBar.style.top = `${Math.max(8, Math.min(top, window.innerHeight - floatingBar.offsetHeight - 8))}px`;
+    });
+    const endDrag = (event: PointerEvent) => {
+      if (!dragState) return;
+      dragState = null;
+      floatingBar.style.cursor = "";
+      floatingBar.style.touchAction = "";
+      try {
+        floatingBar.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture may already be released.
+      }
+    };
+    floatingBar.addEventListener("pointerup", endDrag);
+    floatingBar.addEventListener("pointercancel", endDrag);
     function render() {
       const state = task?.status.state ?? "TASK_STATE_UNSPECIFIED";
-      taskOutput.textContent = task ? JSON.stringify(task, null, 2) : "null";
+      if (task) renderDataTree(taskOutput, task, "Task");
+      else taskOutput.textContent = "No task yet.";
       stateBadge.textContent = state;
       flowStatus.textContent = task ? `${state.replace("TASK_STATE_", "")} · ${task.id.slice(0, 8)}` : "No task yet";
       createButton.disabled = Boolean(task);
-      getButton.disabled =
-        !task ||
-        terminalStates.has(state as TaskState) ||
-        state === "TASK_STATE_INPUT_REQUIRED" ||
-        state === "TASK_STATE_AUTH_REQUIRED";
-      followUpForm.classList.toggle("hidden", state !== "TASK_STATE_INPUT_REQUIRED");
+      const serverState = serverTask?.status.state;
+      serverWorksButton.disabled =
+        !serverTask ||
+        terminalStates.has(serverState as TaskState) ||
+        serverState === "TASK_STATE_INPUT_REQUIRED" ||
+        serverState === "TASK_STATE_AUTH_REQUIRED";
+      getButton.disabled = !task;
+      const clientInterrupted = state === "TASK_STATE_INPUT_REQUIRED" || state === "TASK_STATE_AUTH_REQUIRED";
+      followUpForm.classList.toggle(
+        "hidden",
+        !clientInterrupted && serverState !== "TASK_STATE_AUTH_REQUIRED",
+      );
+      find<HTMLElement>("#follow-up-input").classList.toggle("hidden", state !== "TASK_STATE_INPUT_REQUIRED");
+      find<HTMLElement>("#auth-options").classList.toggle(
+        "hidden",
+        serverState !== "TASK_STATE_AUTH_REQUIRED",
+      );
+      find<HTMLElement>("#auth-inband").classList.toggle("hidden", state !== "TASK_STATE_AUTH_REQUIRED");
+      find<HTMLElement>("#follow-up-title").textContent =
+        state === "TASK_STATE_AUTH_REQUIRED" ? "The server needs authorization" : "The server needs more input";
 
       stateNodes.forEach((node) => {
         const active = node.dataset.taskState === state;
@@ -344,6 +545,9 @@ const states = [
         node.classList.toggle("ring-green-200", active);
         node.classList.toggle("dark:border-green-500", active);
         node.classList.toggle("dark:bg-green-950/40", active);
+        const serverActive = node.dataset.taskState === serverTask?.status.state;
+        node.classList.toggle("bg-stone-200", serverActive);
+        node.classList.toggle("dark:bg-slate-700", serverActive);
       });
     }
 
@@ -351,36 +555,32 @@ const states = [
       const text = find<HTMLInputElement>("#initial-message").value.trim();
       if (!text) return find<HTMLInputElement>("#initial-message").focus();
       serverPath = find<HTMLSelectElement>("#server-path").value as ServerPath;
-      task = {
-        id: crypto.randomUUID(),
-        contextId: crypto.randomUUID(),
+      serverTask = {
+        id: randomUuid(),
+        contextId: randomUuid(),
         status: { state: "TASK_STATE_SUBMITTED", timestamp: new Date().toISOString() },
         history: [],
       };
       const initialMessage = message("ROLE_USER", text);
-      task.history.push(initialMessage);
+      serverTask.history.push(initialMessage);
+      task = structuredClone(serverTask);
       render();
-      setExchange(
+      setOperation(
         "SendMessage",
-        { ...(tenant() ? { tenant: tenant() } : {}), message: initialMessage },
-        { task },
+        "SendMessageRequest",
+        { message: initialMessage },
+        "SendMessageResponse",
+        { task: serverTask },
       );
     });
 
-    getButton.addEventListener("click", () => {
-      if (!task) return;
-      const rawLength = find<HTMLInputElement>("#history-length").value;
-      const historyLength = rawLength === "" ? undefined : Number(rawLength);
-      const request = {
-        ...(tenant() ? { tenant: tenant() } : {}),
-        id: task.id,
-        ...(historyLength === undefined ? {} : { historyLength }),
-      };
-
-      if (task.status.state === "TASK_STATE_SUBMITTED") {
+    serverWorksButton.addEventListener("click", () => {
+      if (!serverTask) return;
+      serverPath = find<HTMLSelectElement>("#server-path").value as ServerPath;
+      if (serverTask.status.state === "TASK_STATE_SUBMITTED") {
         if (serverPath === "reject") setState("TASK_STATE_REJECTED", "The agent declined this task.");
         else setState("TASK_STATE_WORKING", "The agent is processing the request.");
-      } else if (task.status.state === "TASK_STATE_WORKING") {
+      } else if (serverTask.status.state === "TASK_STATE_WORKING") {
         if (serverPath === "input") {
           setState("TASK_STATE_INPUT_REQUIRED", "How many days should the itinerary cover?");
         } else if (serverPath === "auth") {
@@ -388,54 +588,101 @@ const states = [
         } else if (serverPath === "fail") {
           setState("TASK_STATE_FAILED", "The agent could not complete the task.");
         } else {
-          task.artifacts = [{
-            artifactId: crypto.randomUUID(),
+          serverTask.artifacts = [{
+            artifactId: randomUuid(),
             name: "Kyoto itinerary",
             parts: [{ text: "Day 1: Higashiyama and Gion. Day 2: Arashiyama and Nishiki Market." }],
           }];
           setState("TASK_STATE_COMPLETED");
         }
       }
+      render();
+    });
 
-      setExchange("GetTask", request, { task: taskForGet(historyLength) });
+    getButton.addEventListener("click", () => {
+      if (!serverTask) return;
+      const rawLength = find<HTMLInputElement>("#history-length").value;
+      const historyLength = rawLength === "" ? undefined : Number(rawLength);
+      const request = {
+        id: serverTask.id,
+        ...(historyLength === undefined ? {} : { historyLength }),
+      };
+      const snapshot = taskForGet(historyLength);
+      task = structuredClone(snapshot) as Task;
+      render();
+      setOperation("GetTask", "GetTaskRequest", request, "Task", snapshot);
     });
 
     find<HTMLButtonElement>("#cancel-task").addEventListener("click", () => {
       const request = {
-        ...(tenant() ? { tenant: tenant() } : {}),
         id: task?.id ?? "missing-task-id",
         metadata: { reason: "user_request" },
       };
-      if (!task) {
-        setExchange("CancelTask", request, { error: { code: "TaskNotFoundError", message: "The task does not exist." } }, "Error");
-      } else if (terminalStates.has(task.status.state)) {
-        setExchange("CancelTask", request, { error: { code: "TaskNotCancelableError", message: `A task in ${task.status.state} cannot be canceled.` } }, "Error");
+      if (!serverTask) {
+        setOperation("CancelTask", "CancelTaskRequest", request, "Error", { code: "TaskNotFoundError", message: "The task does not exist." }, "Error");
+      } else if (terminalStates.has(serverTask.status.state)) {
+        setOperation("CancelTask", "CancelTaskRequest", request, "Error", { code: "TaskNotCancelableError", message: `A task in ${serverTask.status.state} cannot be canceled.` }, "Error");
       } else {
         setState("TASK_STATE_CANCELED");
-        setExchange("CancelTask", request, { task });
+        task = structuredClone(serverTask);
+        render();
+        setOperation("CancelTask", "CancelTaskRequest", request, "Task", serverTask);
       }
     });
 
+    const resumeServer = (statusText: string, syncClient: boolean) => {
+      serverPath = "complete";
+      setState("TASK_STATE_WORKING", statusText);
+      if (syncClient) task = structuredClone(serverTask!);
+      render();
+    };
+
     followUpForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      if (!task || task.status.state !== "TASK_STATE_INPUT_REQUIRED") return;
+      if (!serverTask || serverTask.status.state !== "TASK_STATE_INPUT_REQUIRED") return;
       const text = find<HTMLInputElement>("#follow-up-message").value.trim();
       if (!text) return find<HTMLInputElement>("#follow-up-message").focus();
       const followUp = message("ROLE_USER", text);
-      task.history.push(followUp);
-      serverPath = "complete";
-      setState("TASK_STATE_WORKING", "The agent resumed work with the new input.");
-      setExchange(
+      serverTask.history.push(followUp);
+      resumeServer("The agent resumed work with the new input.", true);
+      setOperation(
         "SendMessage",
-        { ...(tenant() ? { tenant: tenant() } : {}), message: followUp },
-        { task },
+        "SendMessageRequest",
+        { message: followUp },
+        "SendMessageResponse",
+        { task: serverTask },
       );
     });
 
+    find<HTMLButtonElement>("#auth-send").addEventListener("click", () => {
+      if (!serverTask || serverTask.status.state !== "TASK_STATE_AUTH_REQUIRED") return;
+      const credential = find<HTMLInputElement>("#auth-credential").value.trim();
+      if (!credential) return find<HTMLInputElement>("#auth-credential").focus();
+      const followUp = message("ROLE_USER", `Credential: ${credential}`);
+      serverTask.history.push(followUp);
+      resumeServer("The agent received the credential and resumed work.", true);
+      setOperation(
+        "SendMessage",
+        "SendMessageRequest",
+        { message: followUp },
+        "SendMessageResponse",
+        { task: serverTask },
+      );
+    });
+
+    find<HTMLButtonElement>("#auth-oob").addEventListener("click", () => {
+      if (!serverTask || serverTask.status.state !== "TASK_STATE_AUTH_REQUIRED") return;
+      resumeServer("The agent received the credential out-of-band and resumed work.", false);
+      flowStatus.textContent = "Out-of-band authorization received — poll Get Task to discover the new state";
+    });
+
     find<HTMLButtonElement>("#reset-task").addEventListener("click", () => {
+      serverTask = undefined;
       task = undefined;
+      clearSpecPopovers();
       exchangeBadge.textContent = "None";
-      exchangeOutput.textContent = "Create a task to begin.";
+      requestOutput.textContent = "Create a task to begin.";
+      responseOutput.textContent = "Create a task to begin.";
       for (const arrow of [find("#operation-arrow"), find("#result-arrow")]) {
         arrow.classList.add("opacity-0");
         arrow.setAttribute("aria-hidden", "true");
@@ -443,6 +690,7 @@ const states = [
       render();
     });
 
+    setupSpecPopovers(root);
     render();
   }
 

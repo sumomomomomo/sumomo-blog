@@ -1,0 +1,514 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const controlClass =
+  "w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 font-mono text-sm text-stone-800 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200";
+
+const streamSteps = [
+  ["Initial Task", "StreamResponse.task"],
+  ["Working", "TaskStatusUpdateEvent"],
+  ["Artifact chunk 1", "append: false"],
+  ["Artifact chunk 2", "append: true · lastChunk: true"],
+  ["Completed", "terminal status closes stream"],
+] as const;
+---
+
+<BaseLayout title="A2A Streaming Task" activePage="">
+  <main id="streaming-demo" class="mx-auto max-w-5xl py-8">
+    <header class="mb-8 max-w-3xl">
+      <p class="mb-2 font-mono text-sm font-semibold text-green-700 dark:text-green-400">
+        A2A Protocol · 3.1.2 · 3.1.6 · 4.2
+      </p>
+      <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Streaming Task</h1>
+      <p class="mt-3 text-stone-600 dark:text-slate-300">
+        Step through a <code>SendStreamingMessage</code> response, reconstruct the client’s
+        <code>Task</code> from events, then disconnect and recover with
+        <code>SubscribeToTask</code>.
+      </p>
+    </header>
+
+    <section
+      class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="stream-heading"
+    >
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h2 id="stream-heading" class="text-lg font-semibold">Streaming connection</h2>
+        <div class="flex items-center gap-2">
+          <span id="stream-badge" class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-700 dark:bg-slate-700 dark:text-slate-200">
+            NOT STARTED
+          </span>
+          <span id="flow-status" class="text-sm text-stone-500 dark:text-slate-400" aria-live="polite">
+            Ready
+          </span>
+        </div>
+      </div>
+
+      <svg
+        class="h-auto w-full"
+        viewBox="0 0 900 260"
+        role="img"
+        aria-labelledby="stream-diagram-title stream-diagram-description"
+      >
+        <title id="stream-diagram-title">A2A streaming exchange</title>
+        <desc id="stream-diagram-description">
+          A client agent opens or resumes a stream with a server agent. The server delivers a Task,
+          status updates, and artifact updates.
+        </desc>
+        <defs>
+          <linearGradient id="stream-client-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#86efac"></stop>
+            <stop offset="1" stop-color="#16a34a"></stop>
+          </linearGradient>
+          <linearGradient id="stream-server-fill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#c4b5fd"></stop>
+            <stop offset="1" stop-color="#7c3aed"></stop>
+          </linearGradient>
+          <marker id="stream-request-head" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#16a34a"></path>
+          </marker>
+          <marker id="stream-response-head" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L9,3 z" fill="#7c3aed"></path>
+          </marker>
+        </defs>
+
+        <g aria-label="Client agent">
+          <path d="M55 65v125c0 18 38 32 85 32s85-14 85-32V65" fill="url(#stream-client-fill)"></path>
+          <ellipse cx="140" cy="65" rx="85" ry="32" fill="#bbf7d0" stroke="#15803d" stroke-width="3"></ellipse>
+          <ellipse cx="140" cy="190" rx="85" ry="32" fill="#16a34a" stroke="#15803d" stroke-width="3"></ellipse>
+          <text x="140" y="122" text-anchor="middle" class="fill-green-950 text-2xl font-extrabold">Client</text>
+          <text x="140" y="147" text-anchor="middle" class="fill-green-900 text-[17px] font-semibold">agent</text>
+        </g>
+
+        <g aria-label="Server agent">
+          <path d="M675 65v125c0 18 38 32 85 32s85-14 85-32V65" fill="url(#stream-server-fill)"></path>
+          <ellipse cx="760" cy="65" rx="85" ry="32" fill="#ddd6fe" stroke="#6d28d9" stroke-width="3"></ellipse>
+          <ellipse cx="760" cy="190" rx="85" ry="32" fill="#7c3aed" stroke="#6d28d9" stroke-width="3"></ellipse>
+          <text x="760" y="122" text-anchor="middle" class="fill-violet-950 text-2xl font-extrabold">Server</text>
+          <text x="760" y="147" text-anchor="middle" class="fill-violet-900 text-[17px] font-semibold">agent</text>
+        </g>
+
+        <g id="stream-request-arrow" class="opacity-0" aria-hidden="true">
+          <text id="stream-request-label" x="450" y="58" text-anchor="middle" class="fill-current font-mono text-base font-bold">SendStreamingMessage</text>
+          <line class="[stroke-dasharray:430] [stroke-dashoffset:430]" x1="245" y1="78" x2="650" y2="78" stroke="#16a34a" stroke-width="5" marker-end="url(#stream-request-head)"></line>
+        </g>
+        <g id="stream-response-arrow" class="opacity-0" aria-hidden="true">
+          <text id="stream-response-label" x="450" y="174" text-anchor="middle" class="fill-current font-mono text-base font-bold">Task</text>
+          <line class="[stroke-dasharray:430] [stroke-dashoffset:430]" x1="655" y1="150" x2="250" y2="150" stroke="#7c3aed" stroke-width="5" marker-end="url(#stream-response-head)"></line>
+        </g>
+      </svg>
+    </section>
+
+    <section
+      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="timeline-heading"
+    >
+      <div>
+        <p class="font-mono text-sm font-semibold text-green-700 dark:text-green-400">StreamResponse</p>
+        <h2 id="timeline-heading" class="text-xl font-semibold">Ordered event timeline</h2>
+      </div>
+
+      <ol class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {streamSteps.map(([label, type], index) => (
+          <li
+            data-stream-step={index}
+            class="rounded-xl border border-stone-200 bg-stone-50 p-3 transition dark:border-slate-700 dark:bg-slate-900"
+          >
+            <div class="flex items-center justify-between gap-2">
+              <span class="font-mono text-xs font-bold">{index + 1}</span>
+              <span data-step-status class="rounded-full bg-stone-200 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-stone-600 dark:bg-slate-700 dark:text-slate-300">
+                queued
+              </span>
+            </div>
+            <p class="mt-2 text-sm font-bold">{label}</p>
+            <p class="mt-1 text-xs text-stone-500 dark:text-slate-400">{type}</p>
+          </li>
+        ))}
+      </ol>
+
+      <p class="mt-4 text-sm text-stone-600 dark:text-slate-300">
+        Try disconnecting before an artifact event, advance the server, then subscribe. The missed
+        event remains missed, but the first subscription response supplies the current Task snapshot.
+      </p>
+    </section>
+
+    <section
+      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="controls-heading"
+    >
+      <div class="mb-5">
+        <p class="font-mono text-sm font-semibold text-green-700 dark:text-green-400">Simulation</p>
+        <h2 id="controls-heading" class="text-xl font-semibold">Control event delivery</h2>
+      </div>
+
+      <div class="grid gap-4 sm:grid-cols-3">
+        <label class="flex flex-col gap-1.5 sm:col-span-2">
+          <span class="font-bold">Initial message <small class="text-xs font-medium text-stone-500 dark:text-slate-400">Message.parts[0].text</small></span>
+          <input id="stream-message" class={controlClass} value="Write a short Kyoto itinerary" />
+        </label>
+        <label class="flex flex-col gap-1.5">
+          <span class="font-bold"><code>tenant</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">string?</small></span>
+          <input id="stream-tenant" class={controlClass} placeholder="acme" />
+        </label>
+      </div>
+
+      <div class="mt-5 flex flex-wrap gap-3 border-t border-stone-200 pt-5 dark:border-slate-700">
+        <button id="start-stream" type="button" class="rounded-lg bg-green-700 px-4 py-2.5 font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-green-600 dark:hover:bg-green-500 dark:focus:ring-offset-slate-800">
+          Send Streaming Message
+        </button>
+        <button id="next-event" type="button" disabled class="rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-violet-600 dark:hover:bg-violet-500 dark:focus:ring-offset-slate-800">
+          Next server event
+        </button>
+        <button id="disconnect-stream" type="button" disabled class="rounded-lg border border-amber-400 bg-white px-4 py-2.5 font-semibold text-amber-800 transition hover:bg-amber-50 focus:outline-none focus:ring-2 focus:ring-amber-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:border-amber-700 dark:bg-slate-900 dark:text-amber-300 dark:hover:bg-amber-950 dark:focus:ring-offset-slate-800">
+          Disconnect
+        </button>
+        <button id="subscribe-task" type="button" disabled class="rounded-lg border border-green-400 bg-white px-4 py-2.5 font-semibold text-green-800 transition hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:border-green-700 dark:bg-slate-900 dark:text-green-300 dark:hover:bg-green-950 dark:focus:ring-offset-slate-800">
+          Subscribe to Task
+        </button>
+        <button id="reset-stream" type="button" class="rounded-lg border border-stone-300 bg-white px-4 py-2.5 font-semibold text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-800">
+          Reset
+        </button>
+      </div>
+    </section>
+
+    <div class="mt-6 grid gap-6 lg:grid-cols-2">
+      <section class="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-stone-800 shadow-sm dark:border-slate-700 dark:bg-stone-950 dark:text-slate-100 sm:p-6" aria-labelledby="wire-heading">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h2 id="wire-heading" class="text-lg font-semibold">Latest server item</h2>
+          <span id="wire-badge" class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-600 dark:bg-slate-800 dark:text-slate-300">None</span>
+        </div>
+        <div id="wire-tree" class="max-h-[34rem] overflow-auto font-mono text-sm text-slate-400">
+          Start a stream to begin.
+        </div>
+      </section>
+
+      <section class="min-w-0 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-stone-800 shadow-sm dark:border-slate-700 dark:bg-stone-950 dark:text-slate-100 sm:p-6" aria-labelledby="projection-heading">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <h2 id="projection-heading" class="text-lg font-semibold">Client’s reconstructed Task</h2>
+          <span id="projection-badge" class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-600 dark:bg-slate-800 dark:text-slate-300">No Task</span>
+        </div>
+        <div id="projection-tree" class="max-h-[34rem] overflow-auto font-mono text-sm text-slate-400">
+          No task yet.
+        </div>
+      </section>
+    </div>
+  </main>
+</BaseLayout>
+
+<script>
+  import { clearSpecPopovers, renderDataTree } from "../../utils/render-data-tree";
+  import { randomUuid } from "../../utils/random-uuid";
+
+  type TaskState =
+    | "TASK_STATE_SUBMITTED"
+    | "TASK_STATE_WORKING"
+    | "TASK_STATE_COMPLETED";
+
+  interface TaskStatus {
+    state: TaskState;
+    timestamp: string;
+    message?: {
+      messageId: string;
+      taskId: string;
+      contextId: string;
+      role: "ROLE_AGENT";
+      parts: { text: string }[];
+    };
+  }
+
+  interface Artifact {
+    artifactId: string;
+    name?: string;
+    parts: { text: string }[];
+  }
+
+  interface Task {
+    id: string;
+    contextId: string;
+    status: TaskStatus;
+    history: {
+      messageId: string;
+      taskId: string;
+      contextId: string;
+      role: "ROLE_USER";
+      parts: { text: string }[];
+    }[];
+    artifacts?: Artifact[];
+  }
+
+  type StreamEvent =
+    | { statusUpdate: { taskId: string; contextId: string; status: TaskStatus } }
+    | {
+        artifactUpdate: {
+          taskId: string;
+          contextId: string;
+          artifact: Artifact;
+          append: boolean;
+          lastChunk: boolean;
+        };
+      };
+
+  type DeliveryState = "queued" | "delivered" | "missed";
+
+  function setupStreamingDemo() {
+    const root = document.querySelector<HTMLElement>("#streaming-demo");
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = "true";
+
+    const find = <T extends Element>(selector: string) => root.querySelector<T>(selector)!;
+    const startButton = find<HTMLButtonElement>("#start-stream");
+    const nextButton = find<HTMLButtonElement>("#next-event");
+    const disconnectButton = find<HTMLButtonElement>("#disconnect-stream");
+    const subscribeButton = find<HTMLButtonElement>("#subscribe-task");
+    const streamBadge = find<HTMLElement>("#stream-badge");
+    const flowStatus = find<HTMLElement>("#flow-status");
+    const wireBadge = find<HTMLElement>("#wire-badge");
+    const wireOutput = find<HTMLElement>("#wire-tree");
+    const projectionBadge = find<HTMLElement>("#projection-badge");
+    const projectionOutput = find<HTMLElement>("#projection-tree");
+    const stepNodes = root.querySelectorAll<HTMLElement>("[data-stream-step]");
+    let serverTask: Task | undefined;
+    let clientTask: Task | undefined;
+    let artifactId = "";
+    let nextStep = 0;
+    let connected = false;
+    let deliveries: DeliveryState[] = Array(5).fill("queued");
+
+    const clone = <T,>(value: T): T => structuredClone(value);
+    const tenant = () => find<HTMLInputElement>("#stream-tenant").value.trim();
+    const isTerminal = () => serverTask?.status.state === "TASK_STATE_COMPLETED";
+
+    function setArrow(id: string, labelId: string, label: string | undefined) {
+      const arrow = find<SVGGElement>(id);
+      if (!label) {
+        arrow.classList.add("opacity-0");
+        arrow.setAttribute("aria-hidden", "true");
+        return;
+      }
+      find<SVGTextElement>(labelId).textContent = label;
+      arrow.classList.remove("opacity-0");
+      arrow.setAttribute("aria-hidden", "false");
+      const line = arrow.querySelector<SVGLineElement>("line")!;
+      line.getAnimations().forEach((animation) => animation.cancel());
+      line.animate([{ strokeDashoffset: "430" }, { strokeDashoffset: "0" }], {
+        duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 500,
+        easing: "ease-out",
+        fill: "forwards",
+      });
+    }
+
+    function showFlow(request: string | undefined, response: string | undefined) {
+      setArrow("#stream-request-arrow", "#stream-request-label", request);
+      setArrow("#stream-response-arrow", "#stream-response-label", response);
+    }
+
+    function setWire(label: string, value: object, delivered = true) {
+      wireBadge.textContent = `${label} · ${delivered ? "delivered" : "missed"}`;
+      renderDataTree(wireOutput, value, "StreamResponse");
+    }
+
+    function buildEvent(step: number): StreamEvent {
+      const base = { taskId: serverTask!.id, contextId: serverTask!.contextId };
+      if (step === 1) {
+        return {
+          statusUpdate: {
+            ...base,
+            status: {
+              state: "TASK_STATE_WORKING",
+              timestamp: new Date().toISOString(),
+              message: {
+                messageId: randomUuid(),
+                taskId: serverTask!.id,
+                contextId: serverTask!.contextId,
+                role: "ROLE_AGENT",
+                parts: [{ text: "Drafting the itinerary." }],
+              },
+            },
+          },
+        };
+      }
+      if (step === 2) {
+        return {
+          artifactUpdate: {
+            ...base,
+            artifact: {
+              artifactId,
+              name: "Kyoto itinerary",
+              parts: [{ text: "Day 1: Higashiyama, Kiyomizu-dera, and Gion. " }],
+            },
+            append: false,
+            lastChunk: false,
+          },
+        };
+      }
+      if (step === 3) {
+        return {
+          artifactUpdate: {
+            ...base,
+            artifact: {
+              artifactId,
+              parts: [{ text: "Day 2: Arashiyama and Nishiki Market." }],
+            },
+            append: true,
+            lastChunk: true,
+          },
+        };
+      }
+      return {
+        statusUpdate: {
+          ...base,
+          status: { state: "TASK_STATE_COMPLETED", timestamp: new Date().toISOString() },
+        },
+      };
+    }
+
+    function applyEvent(task: Task, event: StreamEvent) {
+      if ("statusUpdate" in event) {
+        task.status = clone(event.statusUpdate.status);
+        return;
+      }
+
+      const update = event.artifactUpdate;
+      const existing = task.artifacts?.find((artifact) => artifact.artifactId === update.artifact.artifactId);
+      if (update.append && existing) {
+        existing.parts.push(...clone(update.artifact.parts));
+      } else {
+        task.artifacts ??= [];
+        const index = task.artifacts.findIndex((artifact) => artifact.artifactId === update.artifact.artifactId);
+        if (index === -1) task.artifacts.push(clone(update.artifact));
+        else task.artifacts[index] = clone(update.artifact);
+      }
+    }
+
+    function render() {
+      const terminal = isTerminal();
+      startButton.disabled = Boolean(serverTask);
+      nextButton.disabled = !serverTask || nextStep >= deliveries.length;
+      disconnectButton.disabled = !serverTask || !connected || terminal;
+      subscribeButton.disabled = !serverTask || connected;
+      streamBadge.textContent = !serverTask
+        ? "NOT STARTED"
+        : terminal
+          ? "CLOSED"
+          : connected
+            ? "CONNECTED"
+            : "DISCONNECTED";
+      projectionBadge.textContent = clientTask?.status.state ?? "No Task";
+      if (clientTask) renderDataTree(projectionOutput, clientTask, "Task");
+      else projectionOutput.textContent = "No task yet.";
+
+      stepNodes.forEach((node, index) => {
+        const state = deliveries[index];
+        const badge = node.querySelector<HTMLElement>("[data-step-status]")!;
+        badge.textContent = state;
+        badge.className = `rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+          state === "delivered"
+            ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
+            : state === "missed"
+              ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+              : "bg-stone-200 text-stone-600 dark:bg-slate-700 dark:text-slate-300"
+        }`;
+        node.classList.toggle("border-green-600", state === "delivered");
+        node.classList.toggle("bg-green-50", state === "delivered");
+        node.classList.toggle("dark:border-green-500", state === "delivered");
+        node.classList.toggle("dark:bg-green-950/40", state === "delivered");
+        node.classList.toggle("border-red-500", state === "missed");
+        node.classList.toggle("bg-red-50", state === "missed");
+        node.classList.toggle("dark:border-red-500", state === "missed");
+        node.classList.toggle("dark:bg-red-950/40", state === "missed");
+      });
+    }
+
+    startButton.addEventListener("click", () => {
+      const text = find<HTMLInputElement>("#stream-message").value.trim();
+      if (!text) return find<HTMLInputElement>("#stream-message").focus();
+      const id = randomUuid();
+      const contextId = randomUuid();
+      const message = {
+        messageId: randomUuid(),
+        taskId: id,
+        contextId,
+        role: "ROLE_USER" as const,
+        parts: [{ text }],
+      };
+      serverTask = {
+        id,
+        contextId,
+        status: { state: "TASK_STATE_SUBMITTED", timestamp: new Date().toISOString() },
+        history: [message],
+      };
+      clientTask = clone(serverTask);
+      artifactId = randomUuid();
+      nextStep = 1;
+      connected = true;
+      deliveries = ["delivered", "queued", "queued", "queued", "queued"];
+      showFlow("SendStreamingMessage", "Task");
+      setWire("Task", { task: clientTask });
+      flowStatus.textContent = `Stream opened${tenant() ? ` for ${tenant()}` : ""}`;
+      render();
+    });
+
+    nextButton.addEventListener("click", () => {
+      if (!serverTask || nextStep >= deliveries.length) return;
+      const event = buildEvent(nextStep);
+      applyEvent(serverTask, event);
+      if (connected) clientTask = clone(serverTask);
+      deliveries[nextStep] = connected ? "delivered" : "missed";
+      const label = "statusUpdate" in event ? "TaskStatusUpdateEvent" : "TaskArtifactUpdateEvent";
+      showFlow(undefined, connected ? label : undefined);
+      setWire(label, event, connected);
+      flowStatus.textContent = connected ? `${label} received` : `${label} occurred off-stream`;
+      nextStep += 1;
+      if (isTerminal()) connected = false;
+      render();
+    });
+
+    disconnectButton.addEventListener("click", () => {
+      connected = false;
+      showFlow(undefined, undefined);
+      flowStatus.textContent = "Connection lost; Task keeps running";
+      render();
+    });
+
+    subscribeButton.addEventListener("click", () => {
+      if (!serverTask) return;
+      const request = { ...(tenant() ? { tenant: tenant() } : {}), id: serverTask.id };
+      if (isTerminal()) {
+        showFlow("SubscribeToTask", "Error");
+        setWire("UnsupportedOperationError", {
+          error: {
+            code: "UnsupportedOperationError",
+            message: "A terminal task cannot be subscribed to.",
+          },
+        });
+        flowStatus.textContent = "Subscription rejected";
+        return;
+      }
+      connected = true;
+      clientTask = clone(serverTask);
+      showFlow("SubscribeToTask", "Task");
+      setWire("Initial Task", { task: clientTask });
+      flowStatus.textContent = `Subscribed to ${request.id.slice(0, 8)}; current Task received first`;
+      render();
+    });
+
+    find<HTMLButtonElement>("#reset-stream").addEventListener("click", () => {
+      serverTask = undefined;
+      clearSpecPopovers();
+      clientTask = undefined;
+      nextStep = 0;
+      connected = false;
+      deliveries = Array(5).fill("queued");
+      showFlow(undefined, undefined);
+      wireBadge.textContent = "None";
+      wireOutput.textContent = "Start a stream to begin.";
+      flowStatus.textContent = "Ready";
+      projectionBadge.textContent = "No Task";
+      projectionOutput.textContent = "No task yet.";
+      render();
+    });
+
+    render();
+  }
+
+  document.addEventListener("astro:page-load", setupStreamingDemo);
+</script>
