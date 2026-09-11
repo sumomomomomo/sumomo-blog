@@ -169,20 +169,6 @@ const states = [
         </label>
       </div>
 
-      <div id="action-buttons" class="mt-5 flex flex-wrap gap-3 border-t border-stone-200 pt-5 dark:border-slate-700">
-        <button id="create-task" type="button" class="rounded-lg bg-green-700 px-4 py-2.5 font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-green-600 dark:hover:bg-green-500 dark:focus:ring-offset-slate-800">
-          Send Message
-        </button>
-        <button id="get-task" type="button" disabled class="rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-violet-600 dark:hover:bg-violet-500 dark:focus:ring-offset-slate-800">
-          Get Task
-        </button>
-        <button id="cancel-task" type="button" class="rounded-lg border border-red-300 bg-white px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:border-red-800 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950 dark:focus:ring-offset-slate-800">
-          Cancel Task
-        </button>
-        <button id="reset-task" type="button" class="rounded-lg border border-stone-300 bg-white px-4 py-2.5 font-semibold text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-800">
-          Reset
-        </button>
-      </div>
 
       <form id="follow-up-form" class="mt-5 hidden rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
         <label class="flex flex-col gap-1.5">
@@ -198,18 +184,18 @@ const states = [
 
     <div
       id="floating-actions"
-      class="fixed bottom-4 left-4 z-40 hidden flex-wrap gap-3 rounded-xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur cursor-move [&_button]:cursor-pointer dark:border-slate-700 dark:bg-slate-900/95"
+      class="fixed bottom-4 left-4 z-40 flex flex-wrap gap-3 rounded-xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur cursor-move [&_button]:cursor-pointer dark:border-slate-700 dark:bg-slate-900/95"
     >
-      <button id="float-create-task" type="button" class="rounded-lg bg-green-700 px-4 py-2.5 font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-green-600 dark:hover:bg-green-500 dark:focus:ring-offset-slate-800">
+      <button id="create-task" type="button" class="rounded-lg bg-green-700 px-4 py-2.5 font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-green-600 dark:hover:bg-green-500 dark:focus:ring-offset-slate-800">
         Send Message
       </button>
-      <button id="float-get-task" type="button" disabled class="rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-violet-600 dark:hover:bg-violet-500 dark:focus:ring-offset-slate-800">
+      <button id="get-task" type="button" disabled class="rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-violet-600 dark:hover:bg-violet-500 dark:focus:ring-offset-slate-800">
         Get Task
       </button>
-      <button id="float-cancel-task" type="button" class="rounded-lg border border-red-300 bg-white px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:border-red-800 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950 dark:focus:ring-offset-slate-800">
+      <button id="cancel-task" type="button" class="rounded-lg border border-red-300 bg-white px-4 py-2.5 font-semibold text-red-700 transition hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 dark:border-red-800 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950 dark:focus:ring-offset-slate-800">
         Cancel Task
       </button>
-      <button id="float-reset-task" type="button" class="rounded-lg border border-stone-300 bg-white px-4 py-2.5 font-semibold text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-800">
+      <button id="reset-task" type="button" class="rounded-lg border border-stone-300 bg-white px-4 py-2.5 font-semibold text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-800">
         Reset
       </button>
     </div>
@@ -401,28 +387,8 @@ const states = [
     };
     floatingBar.addEventListener("pointerup", endDrag);
     floatingBar.addEventListener("pointercancel", endDrag);
-    const floatCreate = find<HTMLButtonElement>("#float-create-task");
-    const floatGet = find<HTMLButtonElement>("#float-get-task");
-    const floatCancel = find<HTMLButtonElement>("#float-cancel-task");
-    const floatReset = find<HTMLButtonElement>("#float-reset-task");
-    for (const [float, original] of [
-      [floatCreate, createButton],
-      [floatGet, getButton],
-      [floatCancel, find<HTMLButtonElement>("#cancel-task")],
-      [floatReset, find<HTMLButtonElement>("#reset-task")],
-    ] as const) {
-      float.addEventListener("click", () => original.click());
-    }
-    const actionRow = find<HTMLElement>("#action-buttons");
-    new IntersectionObserver(([entry]) => {
-      floatingBar.classList.toggle("hidden", entry.isIntersecting);
-      floatingBar.classList.toggle("flex", !entry.isIntersecting);
-    }).observe(actionRow);
-
     function render() {
       const state = task?.status.state ?? "TASK_STATE_UNSPECIFIED";
-      floatCreate.disabled = createButton.disabled;
-      floatGet.disabled = getButton.disabled;
       if (task) renderDataTree(taskOutput, task, "Task");
       else taskOutput.textContent = "No task yet.";
       stateBadge.textContent = state;
