@@ -54,11 +54,20 @@ const states = [
           </p>
         </div>
         <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+          <p class="font-bold"><code>Server Works on Task</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">demo control</small></p>
+          <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
+            Simulates the server agent doing work: advancing the
+            <span data-spec="task">Task</span> along its lifecycle, possibly producing artifacts or
+            a status <span data-spec="message">Message</span>. This is not a protocol operation —
+            on a real server, progress happens independently of the client.
+          </p>
+        </div>
+        <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
           <p class="font-bold"><code>Get Task</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400"><span data-spec="gettask">GetTask</span></small></p>
           <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
             Sends a <code><span data-spec="gettaskrequest">GetTaskRequest</span></code> and
-            receives the <span data-spec="task">Task</span> directly. Each click advances the
-            simulated server along its lifecycle;
+            receives the <span data-spec="task">Task</span> directly, exactly as the server
+            currently holds it — the state may be unchanged from the last poll.
             <span data-spec="historylength">historyLength?</span> controls how much history comes
             back.
           </p>
@@ -260,6 +269,9 @@ const states = [
       <button id="create-task" type="button" class="rounded-lg bg-green-700 px-4 py-2.5 font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-green-600 dark:hover:bg-green-500 dark:focus:ring-offset-slate-800">
         Send Message
       </button>
+      <button id="server-works" type="button" disabled class="rounded-lg bg-amber-700 px-4 py-2.5 font-semibold text-white transition hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-amber-600 dark:hover:bg-amber-500 dark:focus:ring-offset-slate-800">
+        Server Works on Task
+      </button>
       <button id="get-task" type="button" disabled class="rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-violet-600 dark:hover:bg-violet-500 dark:focus:ring-offset-slate-800">
         Get Task
       </button>
@@ -356,6 +368,7 @@ const states = [
     const find = <T extends Element>(selector: string) => root.querySelector<T>(selector)!;
     const createButton = find<HTMLButtonElement>("#create-task");
     const getButton = find<HTMLButtonElement>("#get-task");
+    const serverWorksButton = find<HTMLButtonElement>("#server-works");
     const taskOutput = find<HTMLElement>("#task-tree");
     const requestOutput = find<HTMLElement>("#request-tree");
     const responseOutput = find<HTMLElement>("#response-tree");
@@ -467,11 +480,12 @@ const states = [
       stateBadge.textContent = state;
       flowStatus.textContent = task ? `${state.replace("TASK_STATE_", "")} · ${task.id.slice(0, 8)}` : "No task yet";
       createButton.disabled = Boolean(task);
-      getButton.disabled =
+      serverWorksButton.disabled =
         !task ||
         terminalStates.has(state as TaskState) ||
         state === "TASK_STATE_INPUT_REQUIRED" ||
         state === "TASK_STATE_AUTH_REQUIRED";
+      getButton.disabled = !task;
       followUpForm.classList.toggle("hidden", state !== "TASK_STATE_INPUT_REQUIRED");
 
       stateNodes.forEach((node) => {
@@ -507,15 +521,9 @@ const states = [
       );
     });
 
-    getButton.addEventListener("click", () => {
+    serverWorksButton.addEventListener("click", () => {
       if (!task) return;
-      const rawLength = find<HTMLInputElement>("#history-length").value;
-      const historyLength = rawLength === "" ? undefined : Number(rawLength);
-      const request = {
-        id: task.id,
-        ...(historyLength === undefined ? {} : { historyLength }),
-      };
-
+      serverPath = find<HTMLSelectElement>("#server-path").value as ServerPath;
       if (task.status.state === "TASK_STATE_SUBMITTED") {
         if (serverPath === "reject") setState("TASK_STATE_REJECTED", "The agent declined this task.");
         else setState("TASK_STATE_WORKING", "The agent is processing the request.");
@@ -535,7 +543,16 @@ const states = [
           setState("TASK_STATE_COMPLETED");
         }
       }
+    });
 
+    getButton.addEventListener("click", () => {
+      if (!task) return;
+      const rawLength = find<HTMLInputElement>("#history-length").value;
+      const historyLength = rawLength === "" ? undefined : Number(rawLength);
+      const request = {
+        id: task.id,
+        ...(historyLength === undefined ? {} : { historyLength }),
+      };
       setOperation("GetTask", "GetTaskRequest", request, "Task", taskForGet(historyLength));
     });
 
