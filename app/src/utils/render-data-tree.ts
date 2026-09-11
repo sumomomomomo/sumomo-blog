@@ -429,7 +429,8 @@ function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTML
     // Click the box to collapse/expand it (only boxes with children).
     node.classList.add("cursor-pointer");
     const collapseIndicator = document.createElement("span");
-    collapseIndicator.className = "ml-auto font-mono text-[10px] text-stone-400 dark:text-slate-500";
+    collapseIndicator.className =
+      "ml-auto font-mono text-[10px] text-stone-400 dark:text-slate-500";
     collapseIndicator.textContent = "▾";
     header.append(collapseIndicator);
     node.addEventListener("click", (event) => {
