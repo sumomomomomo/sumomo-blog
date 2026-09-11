@@ -275,6 +275,14 @@ function buildPopover(
     body.textContent = description;
     box.append(body);
   }
+  const link = document.createElement("a");
+  link.className =
+    "mt-2 inline-block text-xs font-medium text-sky-700 underline underline-offset-2 dark:text-sky-300";
+  link.href = `https://a2a-protocol.org/latest/specification/#${section.replaceAll(".", "")}-${name.toLowerCase()}`;
+  link.target = "_blank";
+  link.rel = "noopener noreferrer";
+  link.textContent = "View in the A2A specification";
+  box.append(link);
   return box;
 }
 
