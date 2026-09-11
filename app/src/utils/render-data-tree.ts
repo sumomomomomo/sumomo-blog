@@ -45,7 +45,7 @@ const specObjects: Record<string, SpecRef> = {
     hover: "Core object (4.1.5)",
     type: "Role",
     description:
-      "Indicates whether the sender of a Message is the client (\"user\") or the remote agent (\"agent\").",
+      'Indicates whether the sender of a Message is the client ("user") or the remote agent ("agent").',
   },
   parts: {
     hover: "Core object (4.1.6)",
@@ -72,7 +72,7 @@ const specObjects: Record<string, SpecRef> = {
     type: "Message[]",
     itemType: "Message",
     description:
-      "A communication turn between a client and a remote agent, having a `role` (\"user\" or \"agent\") and containing one or more `Parts`.",
+      'A communication turn between a client and a remote agent, having a `role` ("user" or "agent") and containing one or more `Parts`.',
   },
   statusupdate: {
     hover: "Core object (4.2.1)",
@@ -108,8 +108,7 @@ const specObjects: Record<string, SpecRef> = {
   sendmessageresponse: {
     hover: "Operation parameter object (9.4.1)",
     type: "SendMessageResponse",
-    description:
-      "The response to SendMessage, contains one of: a Task object or a Message object.",
+    description: "The response to SendMessage, contains one of: a Task object or a Message object.",
   },
   streamresponse: {
     hover: "Operation parameter object (3.2.3)",
@@ -167,9 +166,7 @@ function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTML
   if (spec?.hover) {
     type.className =
       "text-xs text-violet-700 underline decoration-dotted underline-offset-2 dark:text-violet-300";
-    type.title = spec.description
-      ? `${spec.hover}\n\n${spec.description}`
-      : spec.hover;
+    type.title = spec.description ? `${spec.hover}\n\n${spec.description}` : spec.hover;
   } else {
     type.className = "text-xs text-stone-500 dark:text-slate-400";
   }
