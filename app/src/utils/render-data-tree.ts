@@ -359,13 +359,13 @@ export function renderDataTree(container: HTMLElement, value: unknown, label: st
   }
 }
 
-// Keep pinned popovers anchored while scrolling or resizing.
-window.addEventListener(
+// Keep popovers anchored while scrolling (including inner scroll containers) or resizing.
+document.addEventListener(
   "scroll",
   () => {
     for (const state of livePopovers) positionPopover(state);
   },
-  { passive: true },
+  { capture: true, passive: true },
 );
 window.addEventListener("resize", () => {
   for (const state of livePopovers) positionPopover(state);
