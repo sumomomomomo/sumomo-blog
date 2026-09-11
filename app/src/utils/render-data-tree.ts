@@ -1,39 +1,54 @@
-/** Spec-highlighted objects keyed by payload label, with their spec name and a2a-specs.md section. */
-const specObjects: Record<string, { name: string; kind: string; section: string }> = {
+interface SpecRef {
+  /** Tooltip text for spec-defined objects. */
+  hover?: string;
+  /** Display override for the node's type label. */
+  type?: string;
+  /** Display type for elements of an array of spec objects. */
+  itemType?: string;
+  /** Child keys that must not inherit a spec lookup (e.g. error.message). */
+  ignore?: string[];
+}
+
+/**
+ * Spec-highlighted objects keyed by payload label, derived from a2a-specs.md.
+ * Core objects: §4.1/4.2. Operation parameter objects: §3.1/3.2/9.4.
+ */
+const specObjects: Record<string, SpecRef> = {
   // 4.1 Core Objects
-  task: { name: "Task", kind: "Core object", section: "4.1.1" },
-  status: { name: "TaskStatus", kind: "Core object", section: "4.1.2" },
-  message: { name: "Message", kind: "Core object", section: "4.1.4" },
-  role: { name: "Role", kind: "Core object", section: "4.1.5" },
-  parts: { name: "Part", kind: "Core object", section: "4.1.6" },
-  artifact: { name: "Artifact", kind: "Core object", section: "4.1.7" },
-  artifacts: { name: "Artifact", kind: "Core object", section: "4.1.7" },
-  statusupdate: { name: "TaskStatusUpdateEvent", kind: "Core object", section: "4.2.1" },
-  artifactupdate: { name: "TaskArtifactUpdateEvent", kind: "Core object", section: "4.2.2" },
+  task: { hover: "Core object (4.1.1)", type: "Task" },
+  status: { hover: "Core object (4.1.2)", type: "TaskStatus" },
+  state: { hover: "Core object (4.1.3)", type: "TaskState" },
+  message: { hover: "Core object (4.1.4)", type: "Message" },
+  role: { hover: "Core object (4.1.5)", type: "Role" },
+  parts: { hover: "Core object (4.1.6)", type: "Part[]", itemType: "Part" },
+  artifact: { hover: "Core object (4.1.7)", type: "Artifact" },
+  artifacts: { hover: "Core object (4.1.7)", type: "Artifact[]", itemType: "Artifact" },
+  history: { hover: "Core object (4.1.4)", type: "Message[]", itemType: "Message" },
+  statusupdate: { hover: "Core object (4.2.1)", type: "TaskStatusUpdateEvent" },
+  artifactupdate: { hover: "Core object (4.2.2)", type: "TaskArtifactUpdateEvent" },
   // 3.1/3.2 Operation request and response objects
   sendmessagerequest: {
-    name: "SendMessageRequest",
-    kind: "Operation parameter object",
-    section: "3.2.1",
+    hover: "Operation parameter object (3.2.1)",
+    type: "SendMessageRequest",
   },
-  gettaskrequest: { name: "GetTaskRequest", kind: "Operation parameter object", section: "3.1.3" },
-  canceltaskrequest: {
-    name: "CancelTaskRequest",
-    kind: "Operation parameter object",
-    section: "3.1.5",
-  },
+  gettaskrequest: { hover: "Operation parameter object (3.1.3)", type: "GetTaskRequest" },
+  canceltaskrequest: { hover: "Operation parameter object (3.1.5)", type: "CancelTaskRequest" },
   sendmessageresponse: {
-    name: "SendMessageResponse",
-    kind: "Operation parameter object",
-    section: "9.4.1",
+    hover: "Operation parameter object (9.4.1)",
+    type: "SendMessageResponse",
   },
+  streamresponse: { hover: "Operation parameter object (3.2.3)", type: "StreamResponse" },
   configuration: {
-    name: "SendMessageConfiguration",
-    kind: "Operation parameter object",
-    section: "3.2.2",
+    hover: "Operation parameter object (3.2.2)",
+    type: "SendMessageConfiguration",
   },
-  streamresponse: { name: "StreamResponse", kind: "Operation parameter object", section: "3.2.3" },
-  metadata: { name: "Metadata", kind: "Operation parameter object", section: "3.2.5" },
+  metadata: { hover: "Operation parameter object (3.2.5)", type: "Metadata" },
+  // Well-known or scalar spec types without object semantics
+  timestamp: { type: "timestamp" },
+  acceptedoutputmodes: { type: "string[]" },
+  historylength: { type: "integer" },
+  // JSON-RPC error payloads: `message` is a plain string, not a Message object
+  error: { ignore: ["message"] },
 };
 
 function valueType(value: unknown): string {
@@ -42,16 +57,18 @@ function valueType(value: unknown): string {
   return typeof value;
 }
 
-function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
+function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTMLElement {
+  const spec = ctx ?? specObjects[label.toLowerCase()];
+  const typeDisplay = spec?.type ?? valueType(value);
   const node = document.createElement("div");
   node.className =
     depth === 0
       ? "rounded-xl border-2 border-stone-300 bg-stone-50 p-3 transition-[filter] dark:border-slate-600 dark:bg-slate-900"
       : "rounded-lg border border-stone-200 bg-white/70 p-2.5 transition-[filter] dark:border-slate-700 dark:bg-slate-950/70";
+  node.dataset.treeKind = typeDisplay.split(" · ")[0];
   node.dataset.treeNode = "";
-  node.dataset.treeKind = valueType(value).split(" · ")[0];
   node.setAttribute("role", "group");
-  node.setAttribute("aria-label", `${label}: ${valueType(value)}`);
+  node.setAttribute("aria-label", `${label}: ${typeDisplay}`);
 
   const header = document.createElement("div");
   header.className = "flex items-baseline gap-2";
@@ -61,16 +78,14 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
   name.textContent = label;
 
   const type = document.createElement("span");
-  const specObject = specObjects[label.toLowerCase()];
-  if (specObject) {
+  if (spec?.hover) {
     type.className =
       "text-xs text-violet-700 underline decoration-dotted underline-offset-2 dark:text-violet-300";
-    type.title = `${specObject.kind} (${specObject.section})`;
-    type.textContent = specObject.name;
+    type.title = spec.hover;
   } else {
     type.className = "text-xs text-stone-500 dark:text-slate-400";
-    type.textContent = valueType(value);
   }
+  type.textContent = typeDisplay;
   header.append(name, type);
   node.append(header);
 
@@ -86,7 +101,17 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
       empty.textContent = "empty";
       children.append(empty);
     } else {
-      children.append(...entries.map(([key, item]) => makeNode(key, item, depth + 1)));
+      children.append(
+        ...entries.map(([key, item]) => {
+          let childCtx: SpecRef | undefined;
+          if (Array.isArray(value) && spec?.itemType) {
+            childCtx = { hover: spec.hover, type: spec.itemType };
+          } else if (spec?.ignore?.includes(key)) {
+            childCtx = {};
+          }
+          return makeNode(key, item, depth + 1, childCtx);
+        }),
+      );
     }
     node.append(children);
     return node;
