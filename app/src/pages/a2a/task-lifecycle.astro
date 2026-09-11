@@ -377,12 +377,13 @@ const states = [
     const flowStatus = find<HTMLElement>("#flow-status");
     const followUpForm = find<HTMLFormElement>("#follow-up-form");
     const stateNodes = root.querySelectorAll<HTMLElement>("[data-task-state]");
+    let serverTask: Task | undefined;
     let task: Task | undefined;
     let serverPath: ServerPath = "complete";
     const message = (role: A2AMessage["role"], text: string): A2AMessage => ({
       messageId: randomUuid(),
-      contextId: task!.contextId,
-      taskId: task!.id,
+      contextId: serverTask!.contextId,
+      taskId: serverTask!.id,
       role,
       parts: [{ text }],
     });
@@ -422,18 +423,17 @@ const states = [
     }
 
     function setState(state: TaskState, text?: string) {
-      if (!task) return;
-      task.status = {
+      if (!serverTask) return;
+      serverTask.status = {
         state,
         timestamp: new Date().toISOString(),
         ...(text ? { message: message("ROLE_AGENT", text) } : {}),
       };
-      if (text) task.history.push(task.status.message!);
-      render();
+      if (text) serverTask.history.push(serverTask.status.message!);
     }
 
     function taskForGet(historyLength?: number): Omit<Task, "history"> & { history?: A2AMessage[] } {
-      const { history, ...withoutHistory } = task!;
+      const { history, ...withoutHistory } = structuredClone(serverTask!);
       const snapshot: Omit<Task, "history"> & { history?: A2AMessage[] } = withoutHistory;
       if (historyLength === undefined) snapshot.history = history;
       else if (historyLength > 0) snapshot.history = history.slice(-historyLength);
@@ -480,11 +480,12 @@ const states = [
       stateBadge.textContent = state;
       flowStatus.textContent = task ? `${state.replace("TASK_STATE_", "")} · ${task.id.slice(0, 8)}` : "No task yet";
       createButton.disabled = Boolean(task);
+      const serverState = serverTask?.status.state;
       serverWorksButton.disabled =
-        !task ||
-        terminalStates.has(state as TaskState) ||
-        state === "TASK_STATE_INPUT_REQUIRED" ||
-        state === "TASK_STATE_AUTH_REQUIRED";
+        !serverTask ||
+        terminalStates.has(serverState as TaskState) ||
+        serverState === "TASK_STATE_INPUT_REQUIRED" ||
+        serverState === "TASK_STATE_AUTH_REQUIRED";
       getButton.disabled = !task;
       followUpForm.classList.toggle("hidden", state !== "TASK_STATE_INPUT_REQUIRED");
 
@@ -503,31 +504,32 @@ const states = [
       const text = find<HTMLInputElement>("#initial-message").value.trim();
       if (!text) return find<HTMLInputElement>("#initial-message").focus();
       serverPath = find<HTMLSelectElement>("#server-path").value as ServerPath;
-      task = {
+      serverTask = {
         id: randomUuid(),
         contextId: randomUuid(),
         status: { state: "TASK_STATE_SUBMITTED", timestamp: new Date().toISOString() },
         history: [],
       };
       const initialMessage = message("ROLE_USER", text);
-      task.history.push(initialMessage);
+      serverTask.history.push(initialMessage);
+      task = structuredClone(serverTask);
       render();
       setOperation(
         "SendMessage",
         "SendMessageRequest",
         { message: initialMessage },
         "SendMessageResponse",
-        { task },
+        { task: serverTask },
       );
     });
 
     serverWorksButton.addEventListener("click", () => {
-      if (!task) return;
+      if (!serverTask) return;
       serverPath = find<HTMLSelectElement>("#server-path").value as ServerPath;
-      if (task.status.state === "TASK_STATE_SUBMITTED") {
+      if (serverTask.status.state === "TASK_STATE_SUBMITTED") {
         if (serverPath === "reject") setState("TASK_STATE_REJECTED", "The agent declined this task.");
         else setState("TASK_STATE_WORKING", "The agent is processing the request.");
-      } else if (task.status.state === "TASK_STATE_WORKING") {
+      } else if (serverTask.status.state === "TASK_STATE_WORKING") {
         if (serverPath === "input") {
           setState("TASK_STATE_INPUT_REQUIRED", "How many days should the itinerary cover?");
         } else if (serverPath === "auth") {
@@ -535,7 +537,7 @@ const states = [
         } else if (serverPath === "fail") {
           setState("TASK_STATE_FAILED", "The agent could not complete the task.");
         } else {
-          task.artifacts = [{
+          serverTask.artifacts = [{
             artifactId: randomUuid(),
             name: "Kyoto itinerary",
             parts: [{ text: "Day 1: Higashiyama and Gion. Day 2: Arashiyama and Nishiki Market." }],
@@ -546,14 +548,17 @@ const states = [
     });
 
     getButton.addEventListener("click", () => {
-      if (!task) return;
+      if (!serverTask) return;
       const rawLength = find<HTMLInputElement>("#history-length").value;
       const historyLength = rawLength === "" ? undefined : Number(rawLength);
       const request = {
-        id: task.id,
+        id: serverTask.id,
         ...(historyLength === undefined ? {} : { historyLength }),
       };
-      setOperation("GetTask", "GetTaskRequest", request, "Task", taskForGet(historyLength));
+      const snapshot = taskForGet(historyLength);
+      task = structuredClone(snapshot) as Task;
+      render();
+      setOperation("GetTask", "GetTaskRequest", request, "Task", snapshot);
     });
 
     find<HTMLButtonElement>("#cancel-task").addEventListener("click", () => {
@@ -561,35 +566,40 @@ const states = [
         id: task?.id ?? "missing-task-id",
         metadata: { reason: "user_request" },
       };
-      if (!task) {
+      if (!serverTask) {
         setOperation("CancelTask", "CancelTaskRequest", request, "Error", { code: "TaskNotFoundError", message: "The task does not exist." }, "Error");
-      } else if (terminalStates.has(task.status.state)) {
-        setOperation("CancelTask", "CancelTaskRequest", request, "Error", { code: "TaskNotCancelableError", message: `A task in ${task.status.state} cannot be canceled.` }, "Error");
+      } else if (terminalStates.has(serverTask.status.state)) {
+        setOperation("CancelTask", "CancelTaskRequest", request, "Error", { code: "TaskNotCancelableError", message: `A task in ${serverTask.status.state} cannot be canceled.` }, "Error");
       } else {
         setState("TASK_STATE_CANCELED");
-        setOperation("CancelTask", "CancelTaskRequest", request, "Task", task);
+        task = structuredClone(serverTask);
+        render();
+        setOperation("CancelTask", "CancelTaskRequest", request, "Task", serverTask);
       }
     });
 
     followUpForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      if (!task || task.status.state !== "TASK_STATE_INPUT_REQUIRED") return;
+      if (!serverTask || serverTask.status.state !== "TASK_STATE_INPUT_REQUIRED") return;
       const text = find<HTMLInputElement>("#follow-up-message").value.trim();
       if (!text) return find<HTMLInputElement>("#follow-up-message").focus();
       const followUp = message("ROLE_USER", text);
-      task.history.push(followUp);
+      serverTask.history.push(followUp);
       serverPath = "complete";
       setState("TASK_STATE_WORKING", "The agent resumed work with the new input.");
+      task = structuredClone(serverTask);
+      render();
       setOperation(
         "SendMessage",
         "SendMessageRequest",
         { message: followUp },
         "SendMessageResponse",
-        { task },
+        { task: serverTask },
       );
     });
 
     find<HTMLButtonElement>("#reset-task").addEventListener("click", () => {
+      serverTask = undefined;
       task = undefined;
       clearSpecPopovers();
       exchangeBadge.textContent = "None";
