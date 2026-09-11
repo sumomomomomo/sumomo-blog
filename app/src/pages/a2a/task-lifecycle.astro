@@ -188,9 +188,14 @@ const states = [
           <p class="font-mono text-sm font-semibold text-green-700 dark:text-green-400">4.1.3</p>
           <h2 id="states-heading" class="text-xl font-semibold">TaskState</h2>
         </div>
-        <span id="state-badge" class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-700 dark:bg-slate-700 dark:text-slate-200">
-          TASK_STATE_UNSPECIFIED
-        </span>
+        <div class="flex items-center gap-2">
+          <span id="unsync-badge" class="hidden rounded-full bg-orange-100 px-3 py-1 font-mono text-xs font-bold text-orange-700 dark:bg-orange-950 dark:text-orange-300">
+            UNSYNCHRONIZED
+          </span>
+          <span id="state-badge" class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-700 dark:bg-slate-700 dark:text-slate-200">
+            TASK_STATE_UNSPECIFIED
+          </span>
+        </div>
       </div>
 
       <div class="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
@@ -409,6 +414,7 @@ const states = [
     const requestOutput = find<HTMLElement>("#request-tree");
     const responseOutput = find<HTMLElement>("#response-tree");
     const stateBadge = find<HTMLElement>("#state-badge");
+    const unsyncBadge = find<HTMLElement>("#unsync-badge");
     const exchangeBadge = find<HTMLElement>("#exchange-badge");
     const flowStatus = find<HTMLElement>("#flow-status");
     const followUpForm = find<HTMLFormElement>("#follow-up-form");
@@ -515,12 +521,10 @@ const states = [
       else taskOutput.textContent = "No task yet.";
       stateBadge.textContent = state;
       const serverState = serverTask?.status.state;
-      let divergence = "";
-      if (task && serverTask && state !== serverState) {
-        divergence = ` — client copy: ${state.replace("TASK_STATE_", "TASK_STATE_")} · server task: ${serverState?.replace("TASK_STATE_", "")} · poll Get Task to synchronize`;
-      }
+      const unsynchronized = Boolean(task && serverTask && state !== serverState);
+      unsyncBadge.classList.toggle("hidden", !unsynchronized);
       flowStatus.textContent = task
-        ? `${state.replace("TASK_STATE_", "")} · ${task.id.slice(0, 8)}${divergence}`
+        ? `${state.replace("TASK_STATE_", "")} · ${task.id.slice(0, 8)}`
         : "No task yet";
       createButton.disabled = Boolean(task);
       serverWorksButton.disabled =
