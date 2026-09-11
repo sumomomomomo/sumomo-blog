@@ -461,15 +461,26 @@ export function renderDataTree(container: HTMLElement, value: unknown, label: st
   // Darken only the innermost box under the cursor; ancestors stay normal.
   if (!container.dataset.treeHoverBound) {
     container.dataset.treeHoverBound = "true";
+    const hoverClasses = [
+      "brightness-[0.92]",
+      "transition-[filter,background-color]",
+      "duration-150",
+      "dark:!bg-slate-700",
+      "dark:brightness-[1.15]",
+    ];
     const clear = () => {
       for (const node of container.querySelectorAll("[data-tree-node]")) {
-        node.classList.remove("brightness-[0.92]");
+        node.classList.remove(...hoverClasses);
       }
     };
     container.addEventListener("mouseover", (event) => {
       clear();
       const innermost = (event.target as Element).closest("[data-tree-node]");
-      innermost?.classList.add("brightness-[0.92]");
+      if (!innermost) return;
+      for (const node of innermost.querySelectorAll("[data-tree-node]")) {
+        node.classList.add(...hoverClasses);
+      }
+      innermost.classList.add(...hoverClasses);
     });
     container.addEventListener("mouseleave", clear);
   }
