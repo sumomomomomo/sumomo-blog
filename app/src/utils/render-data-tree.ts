@@ -470,7 +470,11 @@ export function renderDataTree(container: HTMLElement, value: unknown, label: st
     container.addEventListener("mouseover", (event) => {
       clear();
       const innermost = (event.target as Element).closest("[data-tree-node]");
-      innermost?.classList.add(...hoverClasses);
+      if (!innermost) return;
+      for (const node of innermost.querySelectorAll("[data-tree-node]")) {
+        node.classList.add(...hoverClasses);
+      }
+      innermost.classList.add(...hoverClasses);
     });
     container.addEventListener("mouseleave", clear);
   }
