@@ -222,6 +222,7 @@ const states = [
 
 <script>
   import { renderDataTree } from "../../utils/render-data-tree";
+  import { randomUuid } from "../../utils/random-uuid";
 
   type TaskState =
     | "TASK_STATE_SUBMITTED"
@@ -277,7 +278,7 @@ const states = [
     const tenant = () => find<HTMLInputElement>("#tenant").value.trim();
 
     const message = (role: A2AMessage["role"], text: string): A2AMessage => ({
-      messageId: crypto.randomUUID(),
+      messageId: randomUuid(),
       contextId: task!.contextId,
       taskId: task!.id,
       role,
@@ -359,8 +360,8 @@ const states = [
       if (!text) return find<HTMLInputElement>("#initial-message").focus();
       serverPath = find<HTMLSelectElement>("#server-path").value as ServerPath;
       task = {
-        id: crypto.randomUUID(),
-        contextId: crypto.randomUUID(),
+        id: randomUuid(),
+        contextId: randomUuid(),
         status: { state: "TASK_STATE_SUBMITTED", timestamp: new Date().toISOString() },
         history: [],
       };
@@ -396,7 +397,7 @@ const states = [
           setState("TASK_STATE_FAILED", "The agent could not complete the task.");
         } else {
           task.artifacts = [{
-            artifactId: crypto.randomUUID(),
+            artifactId: randomUuid(),
             name: "Kyoto itinerary",
             parts: [{ text: "Day 1: Higashiyama and Gion. Day 2: Arashiyama and Nishiki Market." }],
           }];

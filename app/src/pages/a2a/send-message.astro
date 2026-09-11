@@ -224,6 +224,7 @@ const nestedBoxClass =
 
 <script>
   import { renderDataTree } from "../../utils/render-data-tree";
+  import { randomUuid } from "../../utils/random-uuid";
 
   type ResponseKind = "task" | "message" | "error";
 
@@ -266,8 +267,8 @@ const nestedBoxClass =
     if (kind === "task") {
       return {
         task: {
-          id: crypto.randomUUID(),
-          contextId: crypto.randomUUID(),
+          id: randomUuid(),
+          contextId: randomUuid(),
           status: { state: "TASK_STATE_COMPLETED", timestamp: new Date().toISOString() },
         },
       };
@@ -275,10 +276,10 @@ const nestedBoxClass =
     if (kind === "message") {
       return {
         message: {
-          contextId: crypto.randomUUID(),
+          contextId: randomUuid(),
           role: "ROLE_AGENT",
           parts: [{ text: "Here is a direct response from the server agent." }],
-          messageId: crypto.randomUUID(),
+          messageId: randomUuid(),
         },
       };
     }

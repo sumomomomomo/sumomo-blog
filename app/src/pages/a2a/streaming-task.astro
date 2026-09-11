@@ -196,6 +196,7 @@ const streamSteps = [
 
 <script>
   import { renderDataTree } from "../../utils/render-data-tree";
+  import { randomUuid } from "../../utils/random-uuid";
 
   type TaskState =
     | "TASK_STATE_SUBMITTED"
@@ -315,7 +316,7 @@ const streamSteps = [
               state: "TASK_STATE_WORKING",
               timestamp: new Date().toISOString(),
               message: {
-                messageId: crypto.randomUUID(),
+                messageId: randomUuid(),
                 taskId: serverTask!.id,
                 contextId: serverTask!.contextId,
                 role: "ROLE_AGENT",
@@ -412,10 +413,10 @@ const streamSteps = [
     startButton.addEventListener("click", () => {
       const text = find<HTMLInputElement>("#stream-message").value.trim();
       if (!text) return find<HTMLInputElement>("#stream-message").focus();
-      const id = crypto.randomUUID();
-      const contextId = crypto.randomUUID();
+      const id = randomUuid();
+      const contextId = randomUuid();
       const message = {
-        messageId: crypto.randomUUID(),
+        messageId: randomUuid(),
         taskId: id,
         contextId,
         role: "ROLE_USER" as const,
@@ -428,7 +429,7 @@ const streamSteps = [
         history: [message],
       };
       clientTask = clone(serverTask);
-      artifactId = crypto.randomUUID();
+      artifactId = randomUuid();
       nextStep = 1;
       connected = true;
       deliveries = ["delivered", "queued", "queued", "queued", "queued"];
