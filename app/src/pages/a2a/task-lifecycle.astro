@@ -198,7 +198,7 @@ const states = [
 
     <div
       id="floating-actions"
-      class="fixed bottom-4 left-4 z-40 hidden flex-wrap gap-3 rounded-xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur dark:border-slate-700 dark:bg-slate-900/95"
+      class="fixed bottom-4 left-4 z-40 hidden flex-wrap gap-3 rounded-xl border border-stone-200 bg-white/95 p-3 shadow-lg backdrop-blur cursor-move [&_button]:cursor-pointer dark:border-slate-700 dark:bg-slate-900/95"
     >
       <button id="float-create-task" type="button" class="rounded-lg bg-green-700 px-4 py-2.5 font-semibold text-white transition hover:bg-green-800 focus:outline-none focus:ring-2 focus:ring-green-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-green-600 dark:hover:bg-green-500 dark:focus:ring-offset-slate-800">
         Send Message
@@ -369,6 +369,38 @@ const states = [
     }
 
     const floatingBar = find<HTMLElement>("#floating-actions");
+    let dragState: { startX: number; startY: number; origLeft: number; origTop: number } | null = null;
+    floatingBar.addEventListener("pointerdown", (event) => {
+      if ((event.target as HTMLElement).closest("button")) return;
+      const rect = floatingBar.getBoundingClientRect();
+      dragState = { startX: event.clientX, startY: event.clientY, origLeft: rect.left, origTop: rect.top };
+      floatingBar.style.bottom = "auto";
+      floatingBar.style.left = `${rect.left}px`;
+      floatingBar.style.top = `${rect.top}px`;
+      floatingBar.style.cursor = "grabbing";
+      floatingBar.style.touchAction = "none";
+      floatingBar.setPointerCapture(event.pointerId);
+    });
+    floatingBar.addEventListener("pointermove", (event) => {
+      if (!dragState) return;
+      const left = dragState.origLeft + (event.clientX - dragState.startX);
+      const top = dragState.origTop + (event.clientY - dragState.startY);
+      floatingBar.style.left = `${Math.max(8, Math.min(left, window.innerWidth - floatingBar.offsetWidth - 8))}px`;
+      floatingBar.style.top = `${Math.max(8, Math.min(top, window.innerHeight - floatingBar.offsetHeight - 8))}px`;
+    });
+    const endDrag = (event: PointerEvent) => {
+      if (!dragState) return;
+      dragState = null;
+      floatingBar.style.cursor = "";
+      floatingBar.style.touchAction = "";
+      try {
+        floatingBar.releasePointerCapture(event.pointerId);
+      } catch {
+        // Pointer capture may already be released.
+      }
+    };
+    floatingBar.addEventListener("pointerup", endDrag);
+    floatingBar.addEventListener("pointercancel", endDrag);
     const floatCreate = find<HTMLButtonElement>("#float-create-task");
     const floatGet = find<HTMLButtonElement>("#float-get-task");
     const floatCancel = find<HTMLButtonElement>("#float-cancel-task");
