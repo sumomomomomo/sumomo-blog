@@ -8,8 +8,8 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
   const node = document.createElement("div");
   node.className =
     depth === 0
-      ? "rounded-xl border-2 border-slate-600 bg-slate-900 p-3"
-      : "rounded-lg border border-slate-700 bg-slate-950/70 p-2.5";
+      ? "rounded-xl border-2 border-stone-300 bg-stone-50 p-3 dark:border-slate-600 dark:bg-slate-900"
+      : "rounded-lg border border-stone-200 bg-white/70 p-2.5 dark:border-slate-700 dark:bg-slate-950/70";
   node.dataset.treeKind = valueType(value).split(" · ")[0];
   node.setAttribute("role", "group");
   node.setAttribute("aria-label", `${label}: ${valueType(value)}`);
@@ -18,12 +18,12 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
   header.className = "flex items-center justify-between gap-2";
 
   const name = document.createElement("span");
-  name.className = "break-all font-mono text-xs font-bold text-sky-300";
+  name.className = "break-all font-mono text-xs font-bold text-sky-700 dark:text-sky-300";
   name.textContent = label;
 
   const type = document.createElement("span");
   type.className =
-    "shrink-0 rounded-full bg-slate-800 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-slate-400";
+    "shrink-0 rounded-full bg-stone-200 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-stone-500 dark:bg-slate-800 dark:text-slate-400";
   type.textContent = valueType(value);
   header.append(name, type);
   node.append(header);
@@ -36,7 +36,7 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
       : Object.entries(value as Record<string, unknown>);
     if (entries.length === 0) {
       const empty = document.createElement("span");
-      empty.className = "font-mono text-xs italic text-slate-500";
+      empty.className = "font-mono text-xs italic text-stone-400 dark:text-slate-500";
       empty.textContent = "empty";
       children.append(empty);
     } else {
@@ -49,12 +49,12 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
   const primitive = document.createElement("div");
   primitive.className = `mt-1.5 whitespace-pre-wrap break-words font-mono text-sm ${
     value === null || value === undefined
-      ? "italic text-slate-500"
+      ? "italic text-stone-400 dark:text-slate-500"
       : typeof value === "string"
-        ? "text-emerald-300"
+        ? "text-emerald-700 dark:text-emerald-300"
         : typeof value === "boolean"
-          ? "text-violet-300"
-          : "text-amber-300"
+          ? "text-violet-700 dark:text-violet-300"
+          : "text-amber-700 dark:text-amber-300"
   }`;
   primitive.textContent = value === "" ? "(empty string)" : String(value);
   node.append(primitive);
