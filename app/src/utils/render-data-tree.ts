@@ -376,6 +376,11 @@ function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTML
   return node;
 }
 
+/** Removes every live popover (hovered or pinned). */
+export function clearSpecPopovers(): void {
+  for (const state of [...livePopovers]) hidePopover(state);
+}
+
 export function renderDataTree(container: HTMLElement, value: unknown, label: string): void {
   // Drop popovers whose anchors are about to be replaced.
   for (const state of [...livePopovers]) {

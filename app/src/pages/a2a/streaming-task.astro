@@ -195,7 +195,7 @@ const streamSteps = [
 </BaseLayout>
 
 <script>
-  import { renderDataTree } from "../../utils/render-data-tree";
+  import { clearSpecPopovers, renderDataTree } from "../../utils/render-data-tree";
   import { randomUuid } from "../../utils/random-uuid";
 
   type TaskState =
@@ -493,6 +493,7 @@ const streamSteps = [
 
     find<HTMLButtonElement>("#reset-stream").addEventListener("click", () => {
       serverTask = undefined;
+      clearSpecPopovers();
       clientTask = undefined;
       nextStep = 0;
       connected = false;
