@@ -400,14 +400,13 @@ const streamSteps = [
         const state = deliveries[index];
         const badge = node.querySelector<HTMLElement>("[data-step-status]")!;
         badge.textContent = state;
-        badge.classList.toggle("bg-green-100", state === "delivered");
-        badge.classList.toggle("text-green-700", state === "delivered");
-        badge.classList.toggle("dark:bg-green-950", state === "delivered");
-        badge.classList.toggle("dark:text-green-300", state === "delivered");
-        badge.classList.toggle("bg-red-100", state === "missed");
-        badge.classList.toggle("text-red-700", state === "missed");
-        badge.classList.toggle("dark:bg-red-950", state === "missed");
-        badge.classList.toggle("dark:text-red-300", state === "missed");
+        badge.className = `rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide ${
+          state === "delivered"
+            ? "bg-green-100 text-green-700 dark:bg-green-950 dark:text-green-300"
+            : state === "missed"
+              ? "bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300"
+              : "bg-stone-200 text-stone-600 dark:bg-slate-700 dark:text-slate-300"
+        }`;
         node.classList.toggle("border-green-600", state === "delivered");
         node.classList.toggle("bg-green-50", state === "delivered");
         node.classList.toggle("dark:border-green-500", state === "delivered");
