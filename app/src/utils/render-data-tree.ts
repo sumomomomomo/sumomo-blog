@@ -425,6 +425,22 @@ function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTML
       );
     }
     node.append(children);
+
+    // Click the box to collapse/expand it (only boxes with children).
+    node.classList.add("cursor-pointer");
+    const collapseIndicator = document.createElement("span");
+    collapseIndicator.className = "ml-auto font-mono text-[10px] text-stone-400 dark:text-slate-500";
+    collapseIndicator.textContent = "▾";
+    header.append(collapseIndicator);
+    node.addEventListener("click", (event) => {
+      // Ignore clicks on spec-label popovers.
+      if ((event.target as Element).closest("[data-spec]")) return;
+      const collapsed = node.dataset.collapsed === "true";
+      node.dataset.collapsed = collapsed ? "false" : "true";
+      children.classList.toggle("hidden", !collapsed);
+      collapseIndicator.textContent = collapsed ? "▾" : "▸";
+      event.stopPropagation();
+    });
     return node;
   }
 
