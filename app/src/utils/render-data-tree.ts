@@ -433,6 +433,10 @@ function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTML
       "ml-auto font-mono text-[10px] text-stone-400 dark:text-slate-500";
     collapseIndicator.textContent = "▾";
     header.append(collapseIndicator);
+    const ellipsis = document.createElement("div");
+    ellipsis.className = "hidden font-mono text-xs italic text-stone-400 dark:text-slate-500";
+    ellipsis.textContent = "...";
+    node.append(ellipsis);
     node.addEventListener("click", (event) => {
       // Ignore clicks on spec-label popovers.
       if ((event.target as Element).closest("[data-spec]")) return;
@@ -444,6 +448,7 @@ function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTML
       const collapsed = node.dataset.collapsed === "true";
       node.dataset.collapsed = collapsed ? "false" : "true";
       collapseIndicator.textContent = collapsed ? "▾" : "▸";
+      ellipsis.classList.toggle("hidden", collapsed);
       if (collapsed) {
         children.classList.remove("hidden");
         const target = children.scrollHeight;
