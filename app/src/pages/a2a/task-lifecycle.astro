@@ -212,8 +212,19 @@ const states = [
           <h2 id="payload-heading" class="text-lg font-semibold">Last exchange</h2>
           <span id="exchange-badge" class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-600 dark:bg-slate-800 dark:text-slate-300">None</span>
         </div>
-        <div id="exchange-tree" class="max-h-[32rem] overflow-auto font-mono text-sm text-slate-400">
-          Create a task to begin.
+        <div class="grid gap-4 lg:grid-cols-2">
+          <section class="min-w-0">
+            <p class="mb-2 font-mono text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Client → Server</p>
+            <div id="request-tree" class="max-h-[32rem] overflow-auto font-mono text-sm text-slate-400">
+              Create a task to begin.
+            </div>
+          </section>
+          <section class="min-w-0">
+            <p class="mb-2 font-mono text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Server → Client</p>
+            <div id="response-tree" class="max-h-[32rem] overflow-auto font-mono text-sm text-slate-400">
+              Create a task to begin.
+            </div>
+          </section>
         </div>
       </section>
     </div>
@@ -267,7 +278,8 @@ const states = [
     const createButton = find<HTMLButtonElement>("#create-task");
     const getButton = find<HTMLButtonElement>("#get-task");
     const taskOutput = find<HTMLElement>("#task-tree");
-    const exchangeOutput = find<HTMLElement>("#exchange-tree");
+    const requestOutput = find<HTMLElement>("#request-tree");
+    const responseOutput = find<HTMLElement>("#response-tree");
     const stateBadge = find<HTMLElement>("#state-badge");
     const exchangeBadge = find<HTMLElement>("#exchange-badge");
     const flowStatus = find<HTMLElement>("#flow-status");
@@ -304,10 +316,18 @@ const states = [
       }
     }
 
-    function setExchange(operation: string, request: object, response: object, result: "Task" | "Error" = "Task") {
+    function setOperation(
+      operation: string,
+      requestType: string,
+      request: object,
+      responseType: string,
+      response: object,
+      result: "Task" | "Error" = "Task",
+    ) {
       showArrow(operation, result);
       exchangeBadge.textContent = operation;
-      renderDataTree(exchangeOutput, { request, response }, "Exchange");
+      renderDataTree(requestOutput, request, requestType);
+      renderDataTree(responseOutput, response, responseType);
       flowStatus.textContent = `${operation} → ${result}`;
     }
 
@@ -368,9 +388,11 @@ const states = [
       const initialMessage = message("ROLE_USER", text);
       task.history.push(initialMessage);
       render();
-      setExchange(
+      setOperation(
         "SendMessage",
+        "SendMessageRequest",
         { ...(tenant() ? { tenant: tenant() } : {}), message: initialMessage },
+        "SendMessageResponse",
         { task },
       );
     });
@@ -405,7 +427,7 @@ const states = [
         }
       }
 
-      setExchange("GetTask", request, { task: taskForGet(historyLength) });
+      setOperation("GetTask", "GetTaskRequest", request, "Task", taskForGet(historyLength));
     });
 
     find<HTMLButtonElement>("#cancel-task").addEventListener("click", () => {
@@ -415,12 +437,12 @@ const states = [
         metadata: { reason: "user_request" },
       };
       if (!task) {
-        setExchange("CancelTask", request, { error: { code: "TaskNotFoundError", message: "The task does not exist." } }, "Error");
+        setOperation("CancelTask", "CancelTaskRequest", request, "Error", { code: "TaskNotFoundError", message: "The task does not exist." }, "Error");
       } else if (terminalStates.has(task.status.state)) {
-        setExchange("CancelTask", request, { error: { code: "TaskNotCancelableError", message: `A task in ${task.status.state} cannot be canceled.` } }, "Error");
+        setOperation("CancelTask", "CancelTaskRequest", request, "Error", { code: "TaskNotCancelableError", message: `A task in ${task.status.state} cannot be canceled.` }, "Error");
       } else {
         setState("TASK_STATE_CANCELED");
-        setExchange("CancelTask", request, { task });
+        setOperation("CancelTask", "CancelTaskRequest", request, "Task", task);
       }
     });
 
@@ -433,9 +455,11 @@ const states = [
       task.history.push(followUp);
       serverPath = "complete";
       setState("TASK_STATE_WORKING", "The agent resumed work with the new input.");
-      setExchange(
+      setOperation(
         "SendMessage",
+        "SendMessageRequest",
         { ...(tenant() ? { tenant: tenant() } : {}), message: followUp },
+        "SendMessageResponse",
         { task },
       );
     });
@@ -443,7 +467,8 @@ const states = [
     find<HTMLButtonElement>("#reset-task").addEventListener("click", () => {
       task = undefined;
       exchangeBadge.textContent = "None";
-      exchangeOutput.textContent = "Create a task to begin.";
+      requestOutput.textContent = "Create a task to begin.";
+      responseOutput.textContent = "Create a task to begin.";
       for (const arrow of [find("#operation-arrow"), find("#result-arrow")]) {
         arrow.classList.add("opacity-0");
         arrow.setAttribute("aria-hidden", "true");

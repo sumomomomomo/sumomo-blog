@@ -10,8 +10,11 @@ const specObjects: Record<string, { name: string; kind: string; section: string 
   artifacts: { name: "Artifact", kind: "Core object", section: "4.1.7" },
   statusupdate: { name: "TaskStatusUpdateEvent", kind: "Core object", section: "4.2.1" },
   artifactupdate: { name: "TaskArtifactUpdateEvent", kind: "Core object", section: "4.2.2" },
-  // 3.2 Operation Parameter Objects
-  request: { name: "SendMessageRequest", kind: "Operation parameter object", section: "3.2.1" },
+  // 3.1/3.2 Operation request and response objects
+  sendmessagerequest: { name: "SendMessageRequest", kind: "Operation parameter object", section: "3.2.1" },
+  gettaskrequest: { name: "GetTaskRequest", kind: "Operation parameter object", section: "3.1.3" },
+  canceltaskrequest: { name: "CancelTaskRequest", kind: "Operation parameter object", section: "3.1.5" },
+  sendmessageresponse: { name: "SendMessageResponse", kind: "Operation parameter object", section: "9.4.1" },
   configuration: {
     name: "SendMessageConfiguration",
     kind: "Operation parameter object",
