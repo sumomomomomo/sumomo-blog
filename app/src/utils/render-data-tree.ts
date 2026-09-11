@@ -213,7 +213,12 @@ function hidePopover(state: PopoverState): void {
   livePopovers.delete(state);
 }
 
-function buildPopover(name: string, kind: string, section: string, description?: string): HTMLDivElement {
+function buildPopover(
+  name: string,
+  kind: string,
+  section: string,
+  description?: string,
+): HTMLDivElement {
   const box = document.createElement("div");
   box.className =
     "fixed z-50 w-80 max-w-[calc(100vw-1rem)] rounded-xl border border-stone-200 bg-white p-3 text-left shadow-lg dark:border-slate-700 dark:bg-slate-900";
@@ -355,9 +360,13 @@ export function renderDataTree(container: HTMLElement, value: unknown, label: st
 }
 
 // Keep pinned popovers anchored while scrolling or resizing.
-window.addEventListener("scroll", () => {
-  for (const state of livePopovers) positionPopover(state);
-}, { passive: true });
+window.addEventListener(
+  "scroll",
+  () => {
+    for (const state of livePopovers) positionPopover(state);
+  },
+  { passive: true },
+);
 window.addEventListener("resize", () => {
   for (const state of livePopovers) positionPopover(state);
 });
