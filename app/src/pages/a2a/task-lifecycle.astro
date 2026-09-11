@@ -263,7 +263,7 @@ const states = [
 
       <form id="follow-up-form" class="mt-5 hidden rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950/40">
         <label class="flex flex-col gap-1.5">
-          <span class="font-bold text-amber-900 dark:text-amber-200">The server needs more input</span>
+          <span id="follow-up-title" class="font-bold text-amber-900 dark:text-amber-200">The server needs more input</span>
           <span class="text-sm text-amber-800 dark:text-amber-300">The follow-up Message reuses this task’s <code>taskId</code> and <code>contextId</code>.</span>
           <input id="follow-up-message" class={controlClass} value="Two days, focused on food and temples" />
         </label>
@@ -498,7 +498,10 @@ const states = [
         serverState === "TASK_STATE_INPUT_REQUIRED" ||
         serverState === "TASK_STATE_AUTH_REQUIRED";
       getButton.disabled = !task;
-      followUpForm.classList.toggle("hidden", state !== "TASK_STATE_INPUT_REQUIRED");
+      const interrupted = state === "TASK_STATE_INPUT_REQUIRED" || state === "TASK_STATE_AUTH_REQUIRED";
+      followUpForm.classList.toggle("hidden", !interrupted);
+      find<HTMLElement>("#follow-up-title").textContent =
+        state === "TASK_STATE_AUTH_REQUIRED" ? "The server needs authorization" : "The server needs more input";
 
       stateNodes.forEach((node) => {
         const active = node.dataset.taskState === state;
@@ -595,7 +598,7 @@ const states = [
 
     followUpForm.addEventListener("submit", (event) => {
       event.preventDefault();
-      if (!serverTask || serverTask.status.state !== "TASK_STATE_INPUT_REQUIRED") return;
+      if (!serverTask || (serverTask.status.state !== "TASK_STATE_INPUT_REQUIRED" && serverTask.status.state !== "TASK_STATE_AUTH_REQUIRED")) return;
       const text = find<HTMLInputElement>("#follow-up-message").value.trim();
       if (!text) return find<HTMLInputElement>("#follow-up-message").focus();
       const followUp = message("ROLE_USER", text);
