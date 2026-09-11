@@ -41,27 +41,33 @@ const states = [
 
       <div class="grid gap-3 sm:grid-cols-2">
         <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
-          <p class="font-bold"><code>Send Message</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">SendMessage · 3.1.1</small></p>
+          <p class="font-bold"><code>Send Message</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400"><span data-spec="sendmessage">SendMessage</span></small></p>
           <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
-            Sends a <code>SendMessageRequest</code> (3.2.1) containing your initial Message. The
-            simulated server creates a Task in <code>TASK_STATE_SUBMITTED</code> and returns it
-            inside a <code>SendMessageResponse</code>.
+            Sends a <code><span data-spec="sendmessagerequest">SendMessageRequest</span></code>
+            containing your initial <span data-spec="message">Message</span>. The simulated server
+            creates a <span data-spec="task">Task</span> in <code>TASK_STATE_SUBMITTED</code> and
+            returns it inside a
+            <span data-spec="sendmessageresponse">SendMessageResponse</span>.
           </p>
         </div>
         <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
-          <p class="font-bold"><code>Get Task</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">GetTask · 3.1.3</small></p>
+          <p class="font-bold"><code>Get Task</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400"><span data-spec="gettask">GetTask</span></small></p>
           <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
-            Sends a <code>GetTaskRequest</code> and receives the Task directly. Each click advances
-            the simulated server along its lifecycle; <code>historyLength?</code> controls how much
-            history comes back (3.2.4).
+            Sends a <code><span data-spec="gettaskrequest">GetTaskRequest</span></code> and
+            receives the <span data-spec="task">Task</span> directly. Each click advances the
+            simulated server along its lifecycle;
+            <span data-spec="historylength">historyLength?</span> controls how much history comes
+            back.
           </p>
         </div>
         <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
-          <p class="font-bold"><code>Cancel Task</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">CancelTask · 3.1.5</small></p>
+          <p class="font-bold"><code>Cancel Task</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400"><span data-spec="canceltask">CancelTask</span></small></p>
           <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
-            Sends a <code>CancelTaskRequest</code>. The server returns the updated Task with
-            <code>TASK_STATE_CANCELED</code>, or an error such as
-            <code>TaskNotCancelableError</code> if the task is already terminal.
+            Sends a <code><span data-spec="canceltaskrequest">CancelTaskRequest</span></code>. The
+            server returns the updated <span data-spec="task">Task</span> with
+            <span data-spec="state">TASK_STATE_CANCELED</span>, or an error such as
+            <span data-spec="tasknotcancelableerror">TaskNotCancelableError</span> if the task is
+            already terminal.
           </p>
         </div>
         <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
@@ -77,8 +83,8 @@ const states = [
         <div class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
           <p class="font-bold">Current Task</p>
           <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
-            The client's local view of the <code>Task</code> (4.1.1) — the latest state it has
-            received from the server, including status, artifacts, and history. It can lag the
+            The client's local view of the <span data-spec="task">Task</span> — the latest state it
+            has received from the server, including status, artifacts, and history. It can lag the
             server's actual state between polls.
           </p>
         </div>
@@ -86,9 +92,10 @@ const states = [
           <p class="font-bold">Last exchange</p>
           <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
             The most recent request and response, rendered as spec objects: e.g.
-            <code>SendMessageRequest</code> → <code>SendMessageResponse</code>, or
-            <code>GetTaskRequest</code> → <code>Task</code>. Hover any underlined label for its
-            definition.
+            <code><span data-spec="sendmessagerequest">SendMessageRequest</span></code> →
+            <span data-spec="sendmessageresponse">SendMessageResponse</span>, or
+            <code><span data-spec="gettaskrequest">GetTaskRequest</span></code> →
+            <span data-spec="task">Task</span>. Hover any underlined label for its definition.
           </p>
         </div>
       </div>
@@ -300,7 +307,11 @@ const states = [
 </BaseLayout>
 
 <script>
-  import { clearSpecPopovers, renderDataTree } from "../../utils/render-data-tree";
+  import {
+    clearSpecPopovers,
+    renderDataTree,
+    setupSpecPopovers,
+  } from "../../utils/render-data-tree";
   import { randomUuid } from "../../utils/random-uuid";
 
   type TaskState =
@@ -578,6 +589,7 @@ const states = [
       render();
     });
 
+    setupSpecPopovers(root);
     render();
   }
 

@@ -168,10 +168,45 @@ const specObjects: Record<string, SpecRef> = {
     description:
       "A flexible key-value map for passing additional context or parameters with operations. Metadata keys must be strings, and values can be any valid JSON value.",
   },
+  // 3.1 Operations
+  sendmessage: {
+    name: "SendMessage",
+    kind: "Operation",
+    section: "3.1.1",
+    description:
+      "The primary operation for initiating agent interactions. Clients send a message to an agent and receive either a task that tracks the processing or a direct response message.",
+  },
+  gettask: {
+    name: "GetTask",
+    kind: "Operation",
+    section: "3.1.3",
+    description:
+      "Retrieves the current state (including status, artifacts, and optionally history) of a previously initiated task.",
+  },
+  canceltask: {
+    name: "CancelTask",
+    kind: "Operation",
+    section: "3.1.5",
+    description:
+      "Requests the cancellation of an ongoing task. The server will attempt to cancel the task, but success is not guaranteed.",
+  },
+  tasknotcancelableerror: {
+    name: "TaskNotCancelableError",
+    kind: "Error",
+    section: "3.3.2",
+    description: "The task is not in a cancelable state (e.g., already completed, failed, or canceled).",
+  },
   // Well-known or scalar spec types without object semantics
   timestamp: { name: "Timestamp", kind: "", section: "", type: "timestamp" },
   acceptedoutputmodes: { name: "", kind: "", section: "", type: "string[]" },
-  historylength: { name: "", kind: "", section: "", type: "integer" },
+  historylength: {
+    name: "historyLength",
+    kind: "Operation parameter",
+    section: "3.2.4",
+    type: "integer",
+    description:
+      "Controls how much task history is returned in responses: unset returns the server default, 0 omits history, and > 0 returns at most that many recent messages.",
+  },
   // JSON-RPC error payloads: `message` is a plain string, not a Message object
   error: { name: "", kind: "", section: "", ignore: ["message"] },
 };
@@ -286,6 +321,44 @@ function buildPopover(
   return box;
 }
 
+function attachPopover(anchor: HTMLElement, spec: SpecRef): void {
+  const state: PopoverState = {
+    anchor,
+    el: buildPopover(spec.name, spec.kind, spec.section, spec.description),
+    pinned: false,
+  };
+  anchorStates.set(anchor, state);
+  anchor.addEventListener("mouseenter", () => showPopover(state));
+  anchor.addEventListener("mouseleave", () => {
+    if (!state.pinned) hidePopover(state);
+  });
+  anchor.addEventListener("click", (event) => {
+    event.stopPropagation();
+    state.pinned = !state.pinned;
+    if (state.pinned) showPopover(state);
+    else hidePopover(state);
+  });
+}
+
+/** Makes every `[data-spec]` element in the container a hoverable/clickable spec term. */
+export function setupSpecPopovers(container: ParentNode): void {
+  for (const el of container.querySelectorAll<HTMLElement>("[data-spec]")) {
+    if (el.dataset.specBound) continue;
+    const spec = specObjects[el.dataset.spec ?? ""];
+    if (!spec?.kind) continue;
+    el.dataset.specBound = "true";
+    el.classList.add(
+      "cursor-pointer",
+      "text-violet-700",
+      "underline",
+      "decoration-dotted",
+      "underline-offset-2",
+      "dark:text-violet-300",
+    );
+    attachPopover(el, spec);
+  }
+}
+
 function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTMLElement {
   const spec = ctx ?? specObjects[label.toLowerCase()];
   const typeDisplay = spec?.type ?? valueType(value);
@@ -312,22 +385,7 @@ function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTML
       "cursor-pointer text-xs text-violet-700 underline decoration-dotted underline-offset-2 dark:text-violet-300";
     type.textContent = typeDisplay;
 
-    const state: PopoverState = {
-      anchor: type,
-      el: buildPopover(spec.name, spec.kind, spec.section, spec.description),
-      pinned: false,
-    };
-    anchorStates.set(type, state);
-    type.addEventListener("mouseenter", () => showPopover(state));
-    type.addEventListener("mouseleave", () => {
-      if (!state.pinned) hidePopover(state);
-    });
-    type.addEventListener("click", (event) => {
-      event.stopPropagation();
-      state.pinned = !state.pinned;
-      if (state.pinned) showPopover(state);
-      else hidePopover(state);
-    });
+    attachPopover(type, spec);
   } else {
     type.className = "text-xs text-stone-500 dark:text-slate-400";
     type.textContent = typeDisplay;
