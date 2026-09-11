@@ -1,20 +1,24 @@
-/** Spec-highlighted objects keyed by payload label, with kind and a2a-specs.md section. */
-const specObjects: Record<string, { kind: string; section: string }> = {
+/** Spec-highlighted objects keyed by payload label, with their spec name and a2a-specs.md section. */
+const specObjects: Record<string, { name: string; kind: string; section: string }> = {
   // 4.1 Core Objects
-  task: { kind: "Core object", section: "4.1.1" },
-  status: { kind: "Core object", section: "4.1.2" },
-  message: { kind: "Core object", section: "4.1.4" },
-  role: { kind: "Core object", section: "4.1.5" },
-  parts: { kind: "Core object", section: "4.1.6" },
-  artifact: { kind: "Core object", section: "4.1.7" },
-  artifacts: { kind: "Core object", section: "4.1.7" },
-  statusupdate: { kind: "Core object", section: "4.2.1" },
-  artifactupdate: { kind: "Core object", section: "4.2.2" },
+  task: { name: "Task", kind: "Core object", section: "4.1.1" },
+  status: { name: "TaskStatus", kind: "Core object", section: "4.1.2" },
+  message: { name: "Message", kind: "Core object", section: "4.1.4" },
+  role: { name: "Role", kind: "Core object", section: "4.1.5" },
+  parts: { name: "Part", kind: "Core object", section: "4.1.6" },
+  artifact: { name: "Artifact", kind: "Core object", section: "4.1.7" },
+  artifacts: { name: "Artifact", kind: "Core object", section: "4.1.7" },
+  statusupdate: { name: "TaskStatusUpdateEvent", kind: "Core object", section: "4.2.1" },
+  artifactupdate: { name: "TaskArtifactUpdateEvent", kind: "Core object", section: "4.2.2" },
   // 3.2 Operation Parameter Objects
-  request: { kind: "Operation parameter object", section: "3.2.1" },
-  configuration: { kind: "Operation parameter object", section: "3.2.2" },
-  streamresponse: { kind: "Operation parameter object", section: "3.2.3" },
-  metadata: { kind: "Operation parameter object", section: "3.2.5" },
+  request: { name: "SendMessageRequest", kind: "Operation parameter object", section: "3.2.1" },
+  configuration: {
+    name: "SendMessageConfiguration",
+    kind: "Operation parameter object",
+    section: "3.2.2",
+  },
+  streamresponse: { name: "StreamResponse", kind: "Operation parameter object", section: "3.2.3" },
+  metadata: { name: "Metadata", kind: "Operation parameter object", section: "3.2.5" },
 };
 
 function valueType(value: unknown): string {
@@ -46,8 +50,8 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
   if (specObject) {
     type.className =
       "text-xs text-violet-700 underline decoration-dotted underline-offset-2 dark:text-violet-300";
-    type.title = `${specObject.kind} (${specObject.section})`;
-    type.textContent = specObject.kind === "Core object" ? "core object" : "parameter object";
+    type.title = specObject.kind;
+    type.textContent = `${specObject.name} (${specObject.section})`;
   } else {
     type.className = "text-xs text-stone-500 dark:text-slate-400";
     type.textContent = valueType(value);
