@@ -110,7 +110,7 @@ const nestedBoxClass =
 
         <div class="grid gap-3 sm:grid-cols-2">
           <label class={`${nestedBoxClass} ${fieldClass}`}>
-            <span class="font-bold"><code>tenant</code> <small class={fieldTypeClass}>string · optional</small></span>
+            <span class="font-bold"><code>tenant</code> <small class={fieldTypeClass}>string?</small></span>
             <input class={controlClass} id="tenant" name="tenant" type="text" placeholder="acme" />
           </label>
 
@@ -147,7 +147,7 @@ const nestedBoxClass =
                       <input class={controlClass} id="part-text" value="Plan a weekend in Kyoto" required />
                     </label>
                     <label class={`${nestedBoxClass} ${fieldClass}`}>
-                      <span class="font-bold"><code>mediaType</code> <small class={fieldTypeClass}>string · optional</small></span>
+                      <span class="font-bold"><code>mediaType</code> <small class={fieldTypeClass}>string?</small></span>
                       <input class={controlClass} id="part-media-type" value="text/plain" />
                     </label>
                   </div>
@@ -159,7 +159,7 @@ const nestedBoxClass =
           <fieldset class={nestedBoxClass}>
             <legend class="px-1 font-bold">
               <code>configuration</code>
-              <small class={fieldTypeClass}>SendMessageConfiguration · optional</small>
+              <small class={fieldTypeClass}>SendMessageConfiguration?</small>
             </legend>
             <div class="grid gap-3">
               <label class={`${nestedBoxClass} ${fieldClass}`}>
@@ -178,7 +178,7 @@ const nestedBoxClass =
 
           <fieldset class={nestedBoxClass}>
             <legend class="px-1 font-bold">
-              <code>metadata</code> <small class={fieldTypeClass}>object · optional</small>
+              <code>metadata</code> <small class={fieldTypeClass}>object?</small>
             </legend>
             <label class={`${nestedBoxClass} ${fieldClass}`}>
               <span class="font-bold"><code>source</code> <small class={fieldTypeClass}>string</small></span>

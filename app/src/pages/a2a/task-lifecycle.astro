@@ -144,7 +144,7 @@ const states = [
         <h2 id="controls-heading" class="text-xl font-semibold">Drive the lifecycle</h2>
       </div>
 
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
+      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <label class="flex flex-col gap-1.5 sm:col-span-2">
           <span class="font-bold">Initial message <small class="text-xs font-medium text-stone-500 dark:text-slate-400">Message.parts[0].text</small></span>
           <input id="initial-message" class={controlClass} value="Plan a weekend in Kyoto" />
@@ -160,11 +160,11 @@ const states = [
           </select>
         </label>
         <label class="flex flex-col gap-1.5">
-          <span class="font-bold"><code>tenant</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">string · optional</small></span>
+          <span class="font-bold"><code>tenant</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">string?</small></span>
           <input id="tenant" class={controlClass} placeholder="acme" />
         </label>
         <label class="flex flex-col gap-1.5">
-          <span class="font-bold"><code>historyLength</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">integer · optional</small></span>
+          <span class="font-bold"><code>historyLength</code> <small class="text-xs font-medium text-stone-500 dark:text-slate-400">integer?</small></span>
           <input id="history-length" class={controlClass} type="number" min="0" placeholder="Unlimited" value="3" />
         </label>
       </div>
