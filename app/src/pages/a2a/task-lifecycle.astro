@@ -65,7 +65,8 @@ const states = [
           <p class="mt-1 text-sm text-stone-600 dark:text-slate-300">
             Sends a <code><span data-spec="canceltaskrequest">CancelTaskRequest</span></code>. The
             server returns the updated <span data-spec="task">Task</span> with
-            <span data-spec="state">TASK_STATE_CANCELED</span>, or an error such as
+            <span data-spec="state">TaskState</span> of
+            <code>TASK_STATE_CANCELED</code>, or an error such as
             <span data-spec="tasknotcancelableerror">TaskNotCancelableError</span> if the task is
             already terminal.
           </p>
