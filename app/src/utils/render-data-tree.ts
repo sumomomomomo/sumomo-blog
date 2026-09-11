@@ -50,8 +50,8 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
   if (specObject) {
     type.className =
       "text-xs text-violet-700 underline decoration-dotted underline-offset-2 dark:text-violet-300";
-    type.title = specObject.kind;
-    type.textContent = `${specObject.name} (${specObject.section})`;
+    type.title = `${specObject.kind} (${specObject.section})`;
+    type.textContent = specObject.name;
   } else {
     type.className = "text-xs text-stone-500 dark:text-slate-400";
     type.textContent = valueType(value);
