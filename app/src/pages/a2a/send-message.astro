@@ -5,22 +5,10 @@ const fieldClass = "flex flex-col gap-1.5";
 const fieldTypeClass = "text-xs font-medium text-stone-500 dark:text-slate-400";
 const controlClass =
   "w-full rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 font-mono text-sm text-stone-800 outline-none focus:border-green-600 focus:ring-2 focus:ring-green-300 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200";
-const jsonAreaClass =
-  "relative z-10 block w-full resize-y overflow-auto rounded-lg border border-stone-300 bg-transparent px-3 py-2.5 font-mono text-sm leading-5 text-transparent caret-stone-800 outline-none [tab-size:2] focus:border-green-600 focus:ring-2 focus:ring-green-300 dark:border-slate-600 dark:caret-slate-200 dark:focus:ring-green-600";
-const jsonBackdropClass =
-  "pointer-events-none absolute inset-0 z-0 m-0 overflow-hidden whitespace-pre rounded-lg border border-transparent bg-stone-50 px-3 py-2.5 font-mono text-sm leading-5 text-stone-800 [tab-size:2] dark:bg-slate-900 dark:text-slate-200";
-
-const defaultMessage = JSON.stringify(
-  { role: "ROLE_USER", parts: [{ text: "Plan a weekend in Kyoto" }], messageId: "msg-001" },
-  null,
-  2,
-);
-const defaultConfiguration = JSON.stringify(
-  { acceptedOutputModes: ["text/plain"], returnImmediately: false },
-  null,
-  2,
-);
-const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2);
+const objectBoxClass =
+  "rounded-xl border-2 border-green-200 bg-green-50/50 p-4 dark:border-green-900 dark:bg-green-950/20";
+const nestedBoxClass =
+  "rounded-lg border border-stone-300 bg-white p-3 dark:border-slate-700 dark:bg-slate-900";
 ---
 
 <BaseLayout title="A2A Send Message" activePage="">
@@ -111,35 +99,92 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
         <h2 class="text-xl font-semibold">SendMessageRequest</h2>
       </div>
 
-      <div class="grid gap-4 sm:grid-cols-2">
-        <label class={fieldClass}>
-          <span class="font-bold"><code>tenant</code> <small class={fieldTypeClass}>string · optional</small></span>
-          <input class={controlClass} id="tenant" name="tenant" type="text" placeholder="acme" />
-        </label>
+      <div class={objectBoxClass}>
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <code class="font-bold text-green-800 dark:text-green-300">SendMessageRequest</code>
+          <span class="rounded-full bg-green-100 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-green-700 dark:bg-green-950 dark:text-green-300">
+            object
+          </span>
+        </div>
 
-        <label class={fieldClass}>
-          <span class="font-bold"><code>message</code> <small class={fieldTypeClass}>Message · required</small></span>
-          <div class="relative">
-            <pre class={jsonBackdropClass} id="message-backdrop" aria-hidden="true"></pre>
-            <textarea class={jsonAreaClass} id="message" name="message" rows="7" required spellcheck="false">{defaultMessage}</textarea>
-          </div>
-        </label>
+        <div class="grid gap-3 sm:grid-cols-2">
+          <label class={`${nestedBoxClass} ${fieldClass}`}>
+            <span class="font-bold"><code>tenant</code> <small class={fieldTypeClass}>string · optional</small></span>
+            <input class={controlClass} id="tenant" name="tenant" type="text" placeholder="acme" />
+          </label>
 
-        <label class={fieldClass}>
-          <span class="font-bold"><code>configuration</code> <small class={fieldTypeClass}>SendMessageConfiguration · optional</small></span>
-          <div class="relative">
-            <pre class={jsonBackdropClass} id="configuration-backdrop" aria-hidden="true"></pre>
-            <textarea class={jsonAreaClass} id="configuration" name="configuration" rows="6" spellcheck="false">{defaultConfiguration}</textarea>
-          </div>
-        </label>
+          <fieldset class={`${nestedBoxClass} sm:col-span-2`}>
+            <legend class="px-1 font-bold">
+              <code>message</code> <small class={fieldTypeClass}>Message · required</small>
+            </legend>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <label class={`${nestedBoxClass} ${fieldClass}`}>
+                <span class="font-bold"><code>messageId</code> <small class={fieldTypeClass}>string · required</small></span>
+                <input class={controlClass} id="message-id" value="msg-001" required />
+              </label>
+              <label class={`${nestedBoxClass} ${fieldClass}`}>
+                <span class="font-bold"><code>role</code> <small class={fieldTypeClass}>Role · required</small></span>
+                <select class={controlClass} id="message-role">
+                  <option value="ROLE_USER">ROLE_USER</option>
+                </select>
+              </label>
 
-        <label class={fieldClass}>
-          <span class="font-bold"><code>metadata</code> <small class={fieldTypeClass}>object · optional</small></span>
-          <div class="relative">
-            <pre class={jsonBackdropClass} id="metadata-backdrop" aria-hidden="true"></pre>
-            <textarea class={jsonAreaClass} id="metadata" name="metadata" rows="6" spellcheck="false">{defaultMetadata}</textarea>
-          </div>
-        </label>
+              <fieldset class={`${nestedBoxClass} sm:col-span-2`}>
+                <legend class="px-1 font-bold">
+                  <code>parts</code> <small class={fieldTypeClass}>Part[] · required</small>
+                </legend>
+                <div class={nestedBoxClass}>
+                  <div class="mb-2 flex items-center justify-between gap-2">
+                    <code class="text-xs font-bold">[0]</code>
+                    <span class="rounded-full bg-stone-100 px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide text-stone-500 dark:bg-slate-800 dark:text-slate-400">
+                      Part
+                    </span>
+                  </div>
+                  <div class="grid gap-3 sm:grid-cols-2">
+                    <label class={`${nestedBoxClass} ${fieldClass}`}>
+                      <span class="font-bold"><code>text</code> <small class={fieldTypeClass}>string · oneof</small></span>
+                      <input class={controlClass} id="part-text" value="Plan a weekend in Kyoto" required />
+                    </label>
+                    <label class={`${nestedBoxClass} ${fieldClass}`}>
+                      <span class="font-bold"><code>mediaType</code> <small class={fieldTypeClass}>string · optional</small></span>
+                      <input class={controlClass} id="part-media-type" value="text/plain" />
+                    </label>
+                  </div>
+                </div>
+              </fieldset>
+            </div>
+          </fieldset>
+
+          <fieldset class={nestedBoxClass}>
+            <legend class="px-1 font-bold">
+              <code>configuration</code>
+              <small class={fieldTypeClass}>SendMessageConfiguration · optional</small>
+            </legend>
+            <div class="grid gap-3">
+              <label class={`${nestedBoxClass} ${fieldClass}`}>
+                <span class="font-bold"><code>acceptedOutputModes[0]</code> <small class={fieldTypeClass}>string</small></span>
+                <input class={controlClass} id="output-mode" value="text/plain" />
+              </label>
+              <label class={`${nestedBoxClass} ${fieldClass}`}>
+                <span class="font-bold"><code>returnImmediately</code> <small class={fieldTypeClass}>boolean</small></span>
+                <select class={controlClass} id="return-immediately">
+                  <option value="false">false</option>
+                  <option value="true">true</option>
+                </select>
+              </label>
+            </div>
+          </fieldset>
+
+          <fieldset class={nestedBoxClass}>
+            <legend class="px-1 font-bold">
+              <code>metadata</code> <small class={fieldTypeClass}>object · optional</small>
+            </legend>
+            <label class={`${nestedBoxClass} ${fieldClass}`}>
+              <span class="font-bold"><code>source</code> <small class={fieldTypeClass}>string</small></span>
+              <input class={controlClass} id="metadata-source" value="send-message-demo" />
+            </label>
+          </fieldset>
+        </div>
       </div>
 
       <div class="mt-6 flex flex-wrap items-end gap-4 border-t border-stone-200 pt-5 dark:border-slate-700">
@@ -172,78 +217,29 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
         <h2 id="response-heading" class="text-lg font-semibold">Exchange payloads</h2>
         <span id="response-badge" class="rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide"></span>
       </div>
-      <pre class="overflow-x-auto font-mono text-sm leading-5 [tab-size:2]" id="response-pre"><code id="response-json"></code></pre>
+      <div id="response-tree" class="max-h-[40rem] overflow-auto"></div>
     </section>
   </main>
 </BaseLayout>
 
 <script>
+  import { renderDataTree } from "../../utils/render-data-tree";
+
   type ResponseKind = "task" | "message" | "error";
-  type JsonObject = Record<string, unknown>;
 
   interface SendMessageRequest {
     tenant?: string;
-    message: JsonObject;
-    configuration?: JsonObject;
-    metadata?: JsonObject;
+    message: {
+      messageId: string;
+      role: "ROLE_USER";
+      parts: { text: string; mediaType?: string }[];
+    };
+    configuration?: { acceptedOutputModes: string[]; returnImmediately: boolean };
+    metadata?: { source: string };
   }
 
   const wait = (milliseconds: number) =>
     new Promise((resolve) => window.setTimeout(resolve, milliseconds));
-
-  const escapeHtml = (text: string) =>
-    text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
-
-  function highlightJson(text: string): string {
-    const escaped = escapeHtml(text);
-    return escaped.replace(
-      /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
-      (match) => {
-        let cls = "text-amber-700 dark:text-amber-300";
-        if (match.startsWith('"')) {
-          cls = match.endsWith(":")
-            ? "text-sky-700 dark:text-sky-300"
-            : "text-emerald-700 dark:text-emerald-300";
-        } else if (match === "true" || match === "false") {
-          cls = "text-violet-700 dark:text-violet-300";
-        } else if (match === "null") {
-          cls = "text-stone-500 dark:text-stone-400";
-        }
-        return `<span class="${cls}">${match}</span>`;
-      },
-    );
-  }
-
-  function setupJsonHighlight() {
-    const pairs: Array<[string, string]> = [
-      ["message", "message-backdrop"],
-      ["configuration", "configuration-backdrop"],
-      ["metadata", "metadata-backdrop"],
-    ];
-    for (const [areaId, backdropId] of pairs) {
-      const area = document.querySelector<HTMLTextAreaElement>(`#${areaId}`);
-      const backdrop = document.querySelector<HTMLElement>(`#${backdropId}`);
-      if (!area || !backdrop) continue;
-      const sync = () => {
-        backdrop.innerHTML = highlightJson(area.value);
-        backdrop.scrollTop = area.scrollTop;
-        backdrop.scrollLeft = area.scrollLeft;
-      };
-      area.addEventListener("input", sync);
-      area.addEventListener("scroll", sync);
-      sync();
-    }
-  }
-
-  function readObject(id: string, required = false): JsonObject | undefined {
-    const value = document.querySelector<HTMLTextAreaElement>(`#${id}`)?.value.trim() ?? "";
-    if (!value && !required) return undefined;
-    const parsed: unknown = JSON.parse(value);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error(`${id} must be a JSON object.`);
-    }
-    return parsed as JsonObject;
-  }
 
   function hideArrow(arrow: SVGGElement) {
     arrow.classList.add("opacity-0");
@@ -279,6 +275,7 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
     if (kind === "message") {
       return {
         message: {
+          contextId: crypto.randomUUID(),
           role: "ROLE_AGENT",
           parts: [{ text: "Here is a direct response from the server agent." }],
           messageId: crypto.randomUUID(),
@@ -308,7 +305,7 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
       const responseLabel = document.querySelector<SVGTextElement>("#response-label");
       const panel = document.querySelector<HTMLElement>("#response-panel");
       const badge = document.querySelector<HTMLElement>("#response-badge");
-      const output = document.querySelector<HTMLElement>("#response-json");
+      const output = document.querySelector<HTMLElement>("#response-tree");
       const kind = document.querySelector<HTMLSelectElement>("#response-kind")?.value as ResponseKind;
 
       if (!button || !error || !status || !requestArrow || !responseArrow || !responseLabel || !panel || !badge || !output) return;
@@ -320,13 +317,34 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
 
       try {
         const tenant = document.querySelector<HTMLInputElement>("#tenant")?.value.trim();
-        const configuration = readObject("configuration");
-        const metadata = readObject("metadata");
+        const messageId = document.querySelector<HTMLInputElement>("#message-id")!.value.trim();
+        const text = document.querySelector<HTMLInputElement>("#part-text")!.value.trim();
+        const mediaType = document
+          .querySelector<HTMLInputElement>("#part-media-type")!
+          .value.trim();
+        const outputMode = document.querySelector<HTMLInputElement>("#output-mode")!.value.trim();
+        const metadataSource = document
+          .querySelector<HTMLInputElement>("#metadata-source")!
+          .value.trim();
+        if (!messageId || !text) throw new Error("messageId and parts[0].text are required.");
         const request: SendMessageRequest = {
-          message: readObject("message", true)!,
+          message: {
+            messageId,
+            role: "ROLE_USER",
+            parts: [{ text, ...(mediaType ? { mediaType } : {}) }],
+          },
           ...(tenant ? { tenant } : {}),
-          ...(configuration ? { configuration } : {}),
-          ...(metadata ? { metadata } : {}),
+          ...(outputMode
+            ? {
+                configuration: {
+                  acceptedOutputModes: [outputMode],
+                  returnImmediately:
+                    document.querySelector<HTMLSelectElement>("#return-immediately")!.value ===
+                    "true",
+                },
+              }
+            : {}),
+          ...(metadataSource ? { metadata: { source: metadataSource } } : {}),
         };
 
         button.disabled = true;
@@ -344,14 +362,12 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
         status.textContent = `Received ${labels[kind]}`;
         await wait(650);
 
-        const pre = document.querySelector<HTMLElement>("#response-pre");
-        output.innerHTML = highlightJson(JSON.stringify({ request, response: responseFor(kind) }, null, 2));
-        if (pre) pre.scrollTop = 0;
+        renderDataTree(output, { request, response: responseFor(kind) }, "Exchange");
         badge.textContent = labels[kind];
         badge.className = `rounded-full px-3 py-1 text-xs font-bold uppercase tracking-wide ${kind === "error" ? "bg-red-900 text-red-100" : "bg-green-900 text-green-100"}`;
         panel.classList.remove("hidden");
       } catch (cause) {
-        error.textContent = cause instanceof Error ? cause.message : "Enter valid JSON objects.";
+        error.textContent = cause instanceof Error ? cause.message : "Complete the required fields.";
         error.classList.remove("hidden");
         status.textContent = "Request invalid";
       } finally {
@@ -360,9 +376,5 @@ const defaultMetadata = JSON.stringify({ source: "send-message-demo" }, null, 2)
     });
   }
 
-  document.addEventListener("astro:page-load", () => {
-    setupDemo();
-    setupJsonHighlight();
-  });
+  document.addEventListener("astro:page-load", setupDemo);
 </script>
-

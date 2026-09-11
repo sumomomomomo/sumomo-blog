@@ -176,7 +176,9 @@ const streamSteps = [
           <h2 id="wire-heading" class="text-lg font-semibold">Latest server item</h2>
           <span id="wire-badge" class="rounded-full bg-slate-800 px-3 py-1 font-mono text-xs font-bold text-slate-300">None</span>
         </div>
-        <pre class="max-h-[34rem] overflow-auto text-sm"><code id="wire-json">Start a stream to begin.</code></pre>
+        <div id="wire-tree" class="max-h-[34rem] overflow-auto font-mono text-sm text-slate-400">
+          Start a stream to begin.
+        </div>
       </section>
 
       <section class="min-w-0 rounded-2xl border border-stone-200 bg-stone-950 p-4 text-slate-100 shadow-sm sm:p-6" aria-labelledby="projection-heading">
@@ -184,35 +186,16 @@ const streamSteps = [
           <h2 id="projection-heading" class="text-lg font-semibold">Client’s reconstructed Task</h2>
           <span id="projection-badge" class="rounded-full bg-slate-800 px-3 py-1 font-mono text-xs font-bold text-slate-300">No Task</span>
         </div>
-        <pre class="max-h-[34rem] overflow-auto text-sm"><code id="projection-json">null</code></pre>
+        <div id="projection-tree" class="max-h-[34rem] overflow-auto font-mono text-sm text-slate-400">
+          No task yet.
+        </div>
       </section>
     </div>
   </main>
 </BaseLayout>
 
 <script>
-  const escapeHtml = (text: string) =>
-    text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
-
-  function highlightJson(text: string): string {
-    const escaped = escapeHtml(text);
-    return escaped.replace(
-      /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
-      (match) => {
-        let cls = "text-amber-700 dark:text-amber-300";
-        if (match.startsWith('"')) {
-          cls = match.endsWith(":")
-            ? "text-sky-700 dark:text-sky-300"
-            : "text-emerald-700 dark:text-emerald-300";
-        } else if (match === "true" || match === "false") {
-          cls = "text-violet-700 dark:text-violet-300";
-        } else if (match === "null") {
-          cls = "text-stone-500 dark:text-stone-400";
-        }
-        return `<span class="${cls}">${match}</span>`;
-      },
-    );
-  }
+  import { renderDataTree } from "../../utils/render-data-tree";
 
   type TaskState =
     | "TASK_STATE_SUBMITTED"
@@ -278,9 +261,9 @@ const streamSteps = [
     const streamBadge = find<HTMLElement>("#stream-badge");
     const flowStatus = find<HTMLElement>("#flow-status");
     const wireBadge = find<HTMLElement>("#wire-badge");
-    const wireOutput = find<HTMLElement>("#wire-json");
+    const wireOutput = find<HTMLElement>("#wire-tree");
     const projectionBadge = find<HTMLElement>("#projection-badge");
-    const projectionOutput = find<HTMLElement>("#projection-json");
+    const projectionOutput = find<HTMLElement>("#projection-tree");
     const stepNodes = root.querySelectorAll<HTMLElement>("[data-stream-step]");
     let serverTask: Task | undefined;
     let clientTask: Task | undefined;
@@ -319,7 +302,7 @@ const streamSteps = [
 
     function setWire(label: string, value: object, delivered = true) {
       wireBadge.textContent = `${label} · ${delivered ? "delivered" : "missed"}`;
-      wireOutput.innerHTML = highlightJson(JSON.stringify(value, null, 2));
+      renderDataTree(wireOutput, value, "StreamResponse");
     }
 
     function buildEvent(step: number): StreamEvent {
@@ -409,7 +392,8 @@ const streamSteps = [
             ? "CONNECTED"
             : "DISCONNECTED";
       projectionBadge.textContent = clientTask?.status.state ?? "No Task";
-      projectionOutput.innerHTML = clientTask ? highlightJson(JSON.stringify(clientTask, null, 2)) : "null";
+      if (clientTask) renderDataTree(projectionOutput, clientTask, "Task");
+      else projectionOutput.textContent = "No task yet.";
 
       stepNodes.forEach((node, index) => {
         const state = deliveries[index];
@@ -509,7 +493,7 @@ const streamSteps = [
       wireOutput.textContent = "Start a stream to begin.";
       flowStatus.textContent = "Ready";
       projectionBadge.textContent = "No Task";
-      projectionOutput.textContent = "null";
+      projectionOutput.textContent = "No task yet.";
       render();
     });
 

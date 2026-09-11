@@ -202,7 +202,9 @@ const states = [
           <h2 id="task-heading" class="text-lg font-semibold">Current Task</h2>
           <span class="font-mono text-xs text-slate-400">id · contextId · status · artifacts · history</span>
         </div>
-        <pre class="max-h-[32rem] overflow-auto text-sm"><code id="task-json">null</code></pre>
+        <div id="task-tree" class="max-h-[32rem] overflow-auto font-mono text-sm text-slate-400">
+          No task yet.
+        </div>
       </section>
 
       <section class="min-w-0 rounded-2xl border border-stone-200 bg-stone-950 p-4 text-slate-100 shadow-sm sm:p-6" aria-labelledby="payload-heading">
@@ -210,35 +212,16 @@ const states = [
           <h2 id="payload-heading" class="text-lg font-semibold">Last exchange</h2>
           <span id="exchange-badge" class="rounded-full bg-slate-800 px-3 py-1 font-mono text-xs font-bold text-slate-300">None</span>
         </div>
-        <pre class="max-h-[32rem] overflow-auto text-sm"><code id="exchange-json">Create a task to begin.</code></pre>
+        <div id="exchange-tree" class="max-h-[32rem] overflow-auto font-mono text-sm text-slate-400">
+          Create a task to begin.
+        </div>
       </section>
     </div>
   </main>
 </BaseLayout>
 
 <script>
-  const escapeHtml = (text: string) =>
-    text.replace(/&/g, "&").replace(/</g, "<").replace(/>/g, ">");
-
-  function highlightJson(text: string): string {
-    const escaped = escapeHtml(text);
-    return escaped.replace(
-      /("(?:\\u[a-fA-F0-9]{4}|\\[^u]|[^\\"])*"(?:\s*:)?|\b(?:true|false|null)\b|-?\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)/g,
-      (match) => {
-        let cls = "text-amber-700 dark:text-amber-300";
-        if (match.startsWith('"')) {
-          cls = match.endsWith(":")
-            ? "text-sky-700 dark:text-sky-300"
-            : "text-emerald-700 dark:text-emerald-300";
-        } else if (match === "true" || match === "false") {
-          cls = "text-violet-700 dark:text-violet-300";
-        } else if (match === "null") {
-          cls = "text-stone-500 dark:text-stone-400";
-        }
-        return `<span class="${cls}">${match}</span>`;
-      },
-    );
-  }
+  import { renderDataTree } from "../../utils/render-data-tree";
 
   type TaskState =
     | "TASK_STATE_SUBMITTED"
@@ -282,8 +265,8 @@ const states = [
     const find = <T extends Element>(selector: string) => root.querySelector<T>(selector)!;
     const createButton = find<HTMLButtonElement>("#create-task");
     const getButton = find<HTMLButtonElement>("#get-task");
-    const taskOutput = find<HTMLElement>("#task-json");
-    const exchangeOutput = find<HTMLElement>("#exchange-json");
+    const taskOutput = find<HTMLElement>("#task-tree");
+    const exchangeOutput = find<HTMLElement>("#exchange-tree");
     const stateBadge = find<HTMLElement>("#state-badge");
     const exchangeBadge = find<HTMLElement>("#exchange-badge");
     const flowStatus = find<HTMLElement>("#flow-status");
@@ -323,7 +306,7 @@ const states = [
     function setExchange(operation: string, request: object, response: object, result: "Task" | "Error" = "Task") {
       showArrow(operation, result);
       exchangeBadge.textContent = operation;
-      exchangeOutput.innerHTML = highlightJson(JSON.stringify({ request, response }, null, 2));
+      renderDataTree(exchangeOutput, { request, response }, "Exchange");
       flowStatus.textContent = `${operation} → ${result}`;
     }
 
@@ -348,7 +331,8 @@ const states = [
 
     function render() {
       const state = task?.status.state ?? "TASK_STATE_UNSPECIFIED";
-      taskOutput.innerHTML = task ? highlightJson(JSON.stringify(task, null, 2)) : "null";
+      if (task) renderDataTree(taskOutput, task, "Task");
+      else taskOutput.textContent = "No task yet.";
       stateBadge.textContent = state;
       flowStatus.textContent = task ? `${state.replace("TASK_STATE_", "")} · ${task.id.slice(0, 8)}` : "No task yet";
       createButton.disabled = Boolean(task);
