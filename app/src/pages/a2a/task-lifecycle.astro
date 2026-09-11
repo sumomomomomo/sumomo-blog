@@ -509,8 +509,8 @@ const states = [
         node.classList.toggle("dark:border-green-500", active);
         node.classList.toggle("dark:bg-green-950/40", active);
         const serverActive = node.dataset.taskState === serverTask?.status.state;
-        node.classList.toggle("bg-stone-200", serverActive && !active);
-        node.classList.toggle("dark:bg-slate-700", serverActive && !active);
+        node.classList.toggle("bg-stone-200", serverActive);
+        node.classList.toggle("dark:bg-slate-700", serverActive);
       });
     }
 
