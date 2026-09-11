@@ -348,6 +348,7 @@ function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTML
               kind: spec.kind,
               section: spec.section,
               type: spec.itemType,
+              description: spec.description,
             };
           } else if (spec?.ignore?.includes(key)) {
             childCtx = { name: "", kind: "", section: "" };
