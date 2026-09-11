@@ -436,10 +436,44 @@ function makeNode(label: string, value: unknown, depth = 0, ctx?: SpecRef): HTML
     node.addEventListener("click", (event) => {
       // Ignore clicks on spec-label popovers.
       if ((event.target as Element).closest("[data-spec]")) return;
+      // Only the box the user actually clicked toggles; ancestors are untouched.
+      if (event.target !== node && !(event.target as Element).parentElement?.isSameNode(header)) {
+        const innermost = (event.target as Element).closest("[data-tree-node]");
+        if (innermost && innermost !== node) return;
+      }
       const collapsed = node.dataset.collapsed === "true";
       node.dataset.collapsed = collapsed ? "false" : "true";
-      children.classList.toggle("hidden", !collapsed);
       collapseIndicator.textContent = collapsed ? "▾" : "▸";
+      if (collapsed) {
+        children.classList.remove("hidden");
+        const target = children.scrollHeight;
+        children.animate(
+          [
+            { height: "0px", opacity: "0", overflow: "hidden" },
+            { height: `${target}px`, opacity: "1" },
+          ],
+          {
+            duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180,
+            easing: "ease-out",
+          },
+        );
+      } else {
+        const from = children.scrollHeight;
+        children.animate(
+          [
+            { height: `${from}px`, opacity: "1", overflow: "hidden" },
+            { height: "0px", opacity: "0" },
+          ],
+          {
+            duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 180,
+            easing: "ease-in",
+            fill: "forwards",
+          },
+        ).onfinish = () => {
+          children.classList.add("hidden");
+          for (const animation of children.getAnimations()) animation.cancel();
+        };
+      }
       event.stopPropagation();
     });
     return node;
