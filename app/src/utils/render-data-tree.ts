@@ -8,8 +8,8 @@ function makeNode(label: string, value: unknown, depth = 0): HTMLElement {
   const node = document.createElement("div");
   node.className =
     depth === 0
-      ? "rounded-xl border-2 border-stone-300 bg-stone-50 p-3 dark:border-slate-600 dark:bg-slate-900"
-      : "rounded-lg border border-stone-200 bg-white/70 p-2.5 dark:border-slate-700 dark:bg-slate-950/70";
+      ? "rounded-xl border-2 border-stone-300 bg-stone-50 p-3 transition-[filter] hover:brightness-[0.92] dark:border-slate-600 dark:bg-slate-900"
+      : "rounded-lg border border-stone-200 bg-white/70 p-2.5 transition-[filter] hover:brightness-[0.92] dark:border-slate-700 dark:bg-slate-950/70";
   node.dataset.treeKind = valueType(value).split(" · ")[0];
   node.setAttribute("role", "group");
   node.setAttribute("aria-label", `${label}: ${valueType(value)}`);
