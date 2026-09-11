@@ -461,7 +461,7 @@ export function renderDataTree(container: HTMLElement, value: unknown, label: st
   // Darken only the innermost box under the cursor; ancestors stay normal.
   if (!container.dataset.treeHoverBound) {
     container.dataset.treeHoverBound = "true";
-    const hoverClasses = ["brightness-[0.92]", "dark:brightness-[1.18]"];
+    const hoverClasses = ["brightness-[0.92]", "dark:!bg-slate-700"];
     const clear = () => {
       for (const node of container.querySelectorAll("[data-tree-node]")) {
         node.classList.remove(...hoverClasses);
