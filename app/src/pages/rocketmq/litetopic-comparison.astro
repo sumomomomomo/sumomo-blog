@@ -2,11 +2,31 @@
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
 const comparisonRows = [
-  ["Channel structure", "Several queues inside one Topic", "Millions of child LiteTopics inside one parent"],
-  ["Lifecycle", "Topic created and deleted manually", "Child auto-created and removed after idle TTL"],
-  ["Ordering", "Depends on topic/message semantics and partitioning", "One ordered queue per LiteTopic by default"],
-  ["Scaling", "Shared throughput scales with queue count", "Each child is single-queue; aggregate scales across children"],
-  ["Group subscriptions", "All consumers keep the same subscription", "Consumers may subscribe to different LiteTopic sets"],
+  [
+    "Channel structure",
+    "Several queues inside one Topic",
+    "Millions of child LiteTopics inside one parent",
+  ],
+  [
+    "Lifecycle",
+    "Topic created and deleted manually",
+    "Child auto-created and removed after idle TTL",
+  ],
+  [
+    "Ordering",
+    "Depends on topic/message semantics and partitioning",
+    "One ordered queue per LiteTopic by default",
+  ],
+  [
+    "Scaling",
+    "Shared throughput scales with queue count",
+    "Each child is single-queue; aggregate scales across children",
+  ],
+  [
+    "Group subscriptions",
+    "All consumers keep the same subscription",
+    "Consumers may subscribe to different LiteTopic sets",
+  ],
 ] as const;
 ---
 
