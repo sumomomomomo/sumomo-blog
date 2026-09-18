@@ -1,549 +1,200 @@
 ---
+// Replace app/src/pages/rocketmq/litetopic-comparison.astro. No additional dependencies.
 import BaseLayout from "../../layouts/BaseLayout.astro";
 
-const comparisonRows = [
-  [
-    "Channel structure",
-    "Several queues inside one Topic",
-    "Millions of child LiteTopics inside one parent",
-  ],
-  [
-    "Lifecycle",
-    "Topic created and deleted manually",
-    "Child auto-created and removed after idle TTL",
-  ],
-  [
-    "Ordering",
-    "Depends on topic/message semantics and partitioning",
-    "One ordered queue per LiteTopic by default",
-  ],
-  [
-    "Scaling",
-    "Shared throughput scales with queue count",
-    "Each child is single-queue; aggregate scales across children",
-  ],
-  [
-    "Group subscriptions",
-    "All consumers keep the same subscription",
-    "Consumers may subscribe to different LiteTopic sets",
-  ],
-] as const;
+const panel =
+  "rounded-xl border border-stone-300 bg-white p-4 dark:border-slate-600 dark:bg-slate-800";
+const button =
+  "rounded-lg border border-stone-300 bg-white px-3 py-2 text-sm font-semibold hover:bg-sky-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-sky-600 disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700";
+const sessions = ["481", "925"];
 ---
 
-<BaseLayout title="RocketMQ Normal Topic and LiteTopic" activePage="">
-  <main id="litetopic-demo" class="mx-auto max-w-6xl py-8">
-    <header class="mb-8 max-w-3xl">
-      <p class="mb-2 font-mono text-sm font-semibold text-violet-700 dark:text-violet-400">
-        Apache RocketMQ · Topic · LiteTopic
-      </p>
-      <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">
-        Normal Topic versus LiteTopic
-      </h1>
-      <p class="mt-3 text-stone-600 dark:text-slate-300">
-        Send the same session-scoped workload through both models and compare shared queue
-        partitioning with an ephemeral, independently ordered child channel.
-      </p>
+<BaseLayout title="RocketMQ · Shared topics and LiteTopic channels" activePage="">
+  <main id="mq-litetopic" class="mx-auto max-w-6xl py-5">
+    <header class="mb-4">
+      <a href="/rocketmq/" class="text-sm text-sky-700 underline dark:text-sky-300">All RocketMQ demos</a>
+      <h1 class="mt-2 text-2xl font-bold sm:text-3xl">Shared queues or a channel per session?</h1>
+      <p class="mt-2 text-sm text-stone-600 dark:text-slate-300">Send the same events to two separate example topics. Compare subscription scope, ordering, and child-channel expiry.</p>
     </header>
 
-    <section
-      class="rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-900 dark:bg-violet-950/30 sm:p-5"
-      aria-labelledby="choice-heading"
-    >
-      <p class="font-mono text-xs font-bold uppercase tracking-wide text-violet-700 dark:text-violet-400">
-        Architectural choice
-      </p>
-      <h2 id="choice-heading" class="mt-1 text-lg font-semibold text-violet-950 dark:text-violet-100">
-        Shared partitioned throughput or fine-grained channel isolation?
-      </h2>
-      <p class="mt-2 text-sm text-violet-900 dark:text-violet-200">
-        A normal Topic is the general-purpose shared stream. A Lite-type Topic adds lightweight
-        child channels for identities such as sessions, tasks, or users, each with its own queue and lifecycle.
-      </p>
-    </section>
-
-    <section
-      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
-      aria-labelledby="controls-heading"
-    >
-      <div class="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <p class="font-mono text-sm font-semibold text-violet-700 dark:text-violet-400">Paired simulation</p>
-          <h2 id="controls-heading" class="text-xl font-semibold">Run the same workload on both models</h2>
-        </div>
-        <span
-          id="comparison-status"
-          class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-700 dark:bg-slate-700 dark:text-slate-200"
-          aria-live="polite"
-        >
-          READY
-        </span>
+    <section aria-label="Simulation controls" class="sticky top-0 z-10 mb-3 rounded-xl border border-sky-300 bg-sky-50 p-3 shadow-sm dark:border-sky-800 dark:bg-slate-900">
+      <div class="flex flex-wrap items-center gap-2">
+        {sessions.map(id => <button type="button" data-action="send" data-session={id} class={`${button} border-sky-600 text-sky-800 dark:text-sky-300`}>Send session {id}</button>)}
+        <button type="button" data-action="time" class={button}>Advance 15 minutes</button>
+        <button type="button" data-action="undo" class={button} disabled>Previous step</button>
+        <button type="button" data-action="reset" class={button}>Reset</button>
+        <output id="lite-clock" aria-label="Simulated time" class="ml-auto font-mono text-sm">t = 0 min</output>
       </div>
-
-      <div class="mt-5 flex flex-wrap gap-3">
-        <button
-          id="send-first"
-          type="button"
-          class="rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-violet-600 dark:hover:bg-violet-500 dark:focus:ring-offset-slate-800"
-        >
-          1. Send first session message
-        </button>
-        <button
-          id="send-second"
-          type="button"
-          disabled
-          class="rounded-lg bg-sky-700 px-4 py-2.5 font-semibold text-white transition hover:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-sky-600 dark:hover:bg-sky-500 dark:focus:ring-offset-slate-800"
-        >
-          2. Send follow-up
-        </button>
-        <button
-          id="expire-litetopic"
-          type="button"
-          disabled
-          class="rounded-lg bg-amber-700 px-4 py-2.5 font-semibold text-white transition hover:bg-amber-800 focus:outline-none focus:ring-2 focus:ring-amber-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-amber-600 dark:hover:bg-amber-500 dark:focus:ring-offset-slate-800"
-        >
-          3. Unsubscribe and advance TTL
-        </button>
-        <button
-          id="reset-comparison"
-          type="button"
-          class="rounded-lg border border-stone-300 bg-white px-4 py-2.5 font-semibold text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-800"
-        >
-          Reset
-        </button>
-      </div>
-
-      <div class="mt-5 flex flex-wrap gap-2" aria-label="Comparison steps">
-        <span id="step-create" class="rounded-full bg-stone-100 px-3 py-1 font-mono text-xs text-stone-500 dark:bg-slate-900 dark:text-slate-400">1. Create/use channel</span>
-        <span id="step-order" class="rounded-full bg-stone-100 px-3 py-1 font-mono text-xs text-stone-500 dark:bg-slate-900 dark:text-slate-400">2. Follow-up ordering</span>
-        <span id="step-expire" class="rounded-full bg-stone-100 px-3 py-1 font-mono text-xs text-stone-500 dark:bg-slate-900 dark:text-slate-400">3. Lifecycle cleanup</span>
-      </div>
-
-      <div class="mt-4 rounded-xl bg-stone-100 p-4 dark:bg-slate-900" aria-live="polite">
-        <p id="comparison-title" class="font-semibold">The parent resources already exist</p>
-        <p id="comparison-explanation" class="mt-1 text-sm text-stone-600 dark:text-slate-300">
-          The normal Topic owns four shared queues. The Lite-type parent contains one unrelated active child; session-481 does not exist yet.
-        </p>
-      </div>
+      <p id="lite-event" role="status" aria-live="polite" class="mt-2 text-sm font-medium">Both parent topics exist. Send creates a LiteTopic child, but does not subscribe a consumer.</p>
     </section>
 
-    <section class="mt-6 grid gap-5 lg:grid-cols-2" aria-label="Topic model comparison">
-      <article
-        id="normal-panel"
-        class="rounded-2xl border-2 border-sky-300 bg-white p-4 shadow-sm transition dark:border-sky-800 dark:bg-slate-800 sm:p-6"
-      >
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p class="font-mono text-[10px] font-bold uppercase tracking-wide text-sky-700 dark:text-sky-400">Normal Topic</p>
-            <h2 class="mt-1 text-xl font-semibold"><code>session-events</code></h2>
-          </div>
-          <span class="rounded-full bg-sky-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-sky-700 dark:bg-sky-950 dark:text-sky-300">
-            manually managed
-          </span>
+    <div class="grid items-start gap-3 lg:grid-cols-2">
+      <section class={panel} aria-labelledby="shared-heading">
+        <h2 id="shared-heading" class="font-bold">Non-Lite topic · session-events</h2>
+        <label for="shared-mode" class="mt-3 block text-sm font-semibold">Message configuration</label>
+        <select id="shared-mode" class={`${button} mt-1 w-full`}>
+          <option value="normal">Normal messages · no ordering guarantee</option>
+          <option value="fifo">FIFO topic · messageGroup = sessionId</option>
+        </select>
+        <p class="mt-1 text-xs text-stone-600 dark:text-slate-300">Choose before sending; Reset unlocks this setting. A FIFO topic is a different configuration, not a key added to normal messages.</p>
+        <p id="shared-rule" class="mt-3 min-h-12 text-sm">Session identity is message data. Events can go to different shared queues.</p>
+        <div class="mt-3 grid grid-cols-2 gap-2">
+          {[0, 1, 2, 3].map(q => <article class="rounded-lg border border-stone-300 p-2 dark:border-slate-600"><h3 class="font-mono text-sm font-bold">Q{q}</h3><ol id={`shared-q${q}`} class="mt-1 space-y-1 text-xs"><li>Empty</li></ol></article>)}
         </div>
-
-        <p class="mt-3 text-sm text-stone-600 dark:text-slate-300">
-          Session identity is message data inside a shared Topic. It does not automatically create a storage sub-channel.
-        </p>
-
-        <div class="mt-4 rounded-xl bg-sky-50 p-3 dark:bg-sky-950/20">
-          <div class="flex items-center justify-between gap-2">
-            <strong class="text-sm">Topic topology</strong>
-            <span class="font-mono text-xs text-sky-700 dark:text-sky-300">4 queues</span>
-          </div>
-          <div class="mt-3 grid grid-cols-2 gap-2">
-            <div class="rounded-lg border border-sky-200 bg-white p-2 dark:border-sky-900 dark:bg-slate-900">
-              <strong class="font-mono text-xs">Q0</strong>
-              <p class="mt-1 text-xs text-stone-500 dark:text-slate-400">shared lane</p>
-            </div>
-            <div id="normal-q1" class="rounded-lg border border-sky-200 bg-white p-2 transition dark:border-sky-900 dark:bg-slate-900">
-              <strong class="font-mono text-xs">Q1</strong>
-              <p id="normal-message-one" class="mt-1 hidden font-mono text-xs text-sky-700 dark:text-sky-300">3 · S481-M1</p>
-              <p id="normal-q1-empty" class="mt-1 text-xs text-stone-500 dark:text-slate-400">shared lane</p>
-            </div>
-            <div class="rounded-lg border border-sky-200 bg-white p-2 dark:border-sky-900 dark:bg-slate-900">
-              <strong class="font-mono text-xs">Q2</strong>
-              <p class="mt-1 text-xs text-stone-500 dark:text-slate-400">shared lane</p>
-            </div>
-            <div id="normal-q3" class="rounded-lg border border-sky-200 bg-white p-2 transition dark:border-sky-900 dark:bg-slate-900">
-              <strong class="font-mono text-xs">Q3</strong>
-              <p id="normal-message-two" class="mt-1 hidden font-mono text-xs text-sky-700 dark:text-sky-300">2 · S481-M2</p>
-              <p id="normal-q3-empty" class="mt-1 text-xs text-stone-500 dark:text-slate-400">shared lane</p>
-            </div>
-          </div>
+        <div class="mt-3 rounded-lg bg-stone-100 p-3 text-sm dark:bg-slate-900">
+          <h3 class="font-semibold">Group shared-workers</h3>
+          <p class="mt-1 text-xs">N1 and N2 both subscribe to session-events / all tags.</p>
+          <button type="button" data-action="consume-shared" class={`${button} mt-2`} disabled>Consume one shared message</button>
+          <p id="shared-delivery" class="mt-2 text-xs">No delivery yet.</p>
         </div>
+        <p class="mt-3 text-xs text-stone-600 dark:text-slate-300">The parent remains until explicitly deleted. Message retention is separate and is not simulated here.</p>
+      </section>
 
-        <div id="normal-message-model" class="mt-4 hidden rounded-xl border border-sky-200 bg-sky-50 p-3 text-sm dark:border-sky-900 dark:bg-sky-950/20">
-          <p class="font-semibold">Session identity remains an attribute</p>
-          <p class="mt-1 font-mono text-xs">sessionId = session-481</p>
-          <p class="mt-2 text-xs text-stone-600 dark:text-slate-300">
-            The two queue placements shown here are illustrative normal-message routing without a
-            message-group key or custom partitioning.
-          </p>
+      <section class={panel} aria-labelledby="lite-heading">
+        <h2 id="lite-heading" class="font-bold">Lite-type topic · agent-sessions</h2>
+        <p class="mt-2 text-sm">Each child has its own ordered queue and subscription scope. Demo idle TTL: 60 simulated minutes.</p>
+        <p id="lite-count" class="mt-2 text-sm font-semibold">Active child channels: 0</p>
+        <div class="mt-3 grid gap-2 sm:grid-cols-2">
+          {sessions.map(id => <article class="rounded-lg border border-violet-300 p-3 dark:border-violet-800"><h3 class="font-mono text-sm font-bold">session-{id}</h3><p id={`child-status-${id}`} class="mt-2 text-xs">Absent</p><ol id={`child-messages-${id}`} class="mt-2 space-y-1 text-xs"></ol></article>)}
         </div>
-
-        <div class="mt-4 rounded-xl border border-stone-200 p-3 dark:border-slate-700">
-          <div class="flex items-center justify-between gap-2">
-            <strong class="text-sm">ConsumerGroup <code>session-workers</code></strong>
-            <span class="text-[10px] font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">consistent subscription</span>
-          </div>
-          <div class="mt-3 grid gap-2 sm:grid-cols-2">
-            <div class="rounded-lg bg-stone-100 p-2 text-xs dark:bg-slate-900">
-              <strong>Consumer N1</strong>
-              <p class="mt-1 font-mono text-stone-500 dark:text-slate-400">session-events · same filter</p>
-            </div>
-            <div class="rounded-lg bg-stone-100 p-2 text-xs dark:bg-slate-900">
-              <strong>Consumer N2</strong>
-              <p class="mt-1 font-mono text-stone-500 dark:text-slate-400">session-events · same filter</p>
-            </div>
-          </div>
+        <div class="mt-3 rounded-lg bg-stone-100 p-3 dark:bg-slate-900">
+          <h3 class="text-sm font-semibold">Group lite-workers · independent child sets</h3>
+          {sessions.map((id, i) => <div class="mt-3 border-t border-stone-300 pt-2 dark:border-slate-600"><p class="text-sm font-semibold">Consumer L{i + 1}</p><div class="mt-1 flex flex-wrap gap-2"><button type="button" data-action="subscribe" data-session={id} class={button}>Subscribe L{i + 1} to {id}</button><button type="button" data-action="consume-lite" data-session={id} class={button} disabled>Consume with L{i + 1}</button></div><p id={`subscription-${id}`} class="mt-1 text-xs">No subscription selected.</p></div>)}
+          <p id="lite-delivery" class="mt-3 text-xs">No delivery yet.</p>
         </div>
+      </section>
+    </div>
 
-        <div class="mt-4 grid grid-cols-2 gap-3">
-          <div class="rounded-xl bg-stone-100 p-3 dark:bg-slate-900">
-            <p class="text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Child channels</p>
-            <p class="mt-1 font-mono text-xl font-bold">0</p>
-          </div>
-          <div class="rounded-xl bg-stone-100 p-3 dark:bg-slate-900">
-            <p class="text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">After idle time</p>
-            <p id="normal-lifecycle" class="mt-1 font-semibold">Topic remains</p>
-          </div>
-        </div>
-      </article>
-
-      <article
-        id="lite-panel"
-        class="rounded-2xl border-2 border-violet-300 bg-white p-4 shadow-sm transition dark:border-violet-800 dark:bg-slate-800 sm:p-6"
-      >
-        <div class="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <p class="font-mono text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:text-violet-400">Lite-type Topic</p>
-            <h2 class="mt-1 text-xl font-semibold"><code>agent-sessions</code></h2>
-          </div>
-          <span class="rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:bg-violet-950 dark:text-violet-300">
-            parent created in advance
-          </span>
-        </div>
-
-        <p class="mt-3 text-sm text-stone-600 dark:text-slate-300">
-          Each session can become an auto-managed secondary container with its own ordered queue and subscription scope.
-        </p>
-
-        <div class="mt-4 rounded-xl border-2 border-violet-300 bg-violet-50 p-3 dark:border-violet-800 dark:bg-violet-950/20">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <strong class="text-sm">Active LiteTopics</strong>
-            <span id="active-lite-count" class="font-mono text-lg font-bold text-violet-800 dark:text-violet-300">1</span>
-          </div>
-
-          <div class="mt-3 rounded-lg border border-violet-200 bg-white p-3 dark:border-violet-900 dark:bg-slate-900">
-            <div class="flex items-center justify-between gap-2">
-              <strong class="font-mono text-sm">session-925</strong>
-              <span class="rounded bg-stone-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-stone-500 dark:bg-slate-800 dark:text-slate-400">unrelated</span>
-            </div>
-            <p class="mt-1 font-mono text-xs text-stone-500 dark:text-slate-400">Q0 · one ordered queue</p>
-          </div>
-
-          <div id="lite-empty" class="mt-3 rounded-lg border border-dashed border-violet-300 p-4 text-center text-sm text-violet-700 dark:border-violet-800 dark:text-violet-300">
-            <code>session-481</code> does not exist yet.
-          </div>
-
-          <div id="lite-session" class="mt-3 hidden rounded-lg border-2 border-violet-500 bg-white p-3 transition dark:bg-slate-900">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <strong class="font-mono text-sm">session-481</strong>
-                <p class="mt-1 text-xs text-stone-500 dark:text-slate-400">auto-created secondary container</p>
-              </div>
-              <span class="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:bg-violet-950 dark:text-violet-300">
-                one ordered queue
-              </span>
-            </div>
-            <div class="mt-3 rounded-lg bg-violet-50 p-3 dark:bg-violet-950/30">
-              <div class="flex items-center justify-between gap-2">
-                <strong class="font-mono text-xs">Q0</strong>
-                <span class="font-mono text-xs text-violet-700 dark:text-violet-300">configured TTL <strong id="ttl-value">30 min</strong></span>
-              </div>
-              <div class="mt-2 flex flex-wrap gap-2">
-                <span id="lite-message-one" class="hidden rounded border border-violet-300 bg-white px-2 py-1 font-mono text-xs dark:border-violet-800 dark:bg-slate-900">0 · S481-M1</span>
-                <span id="lite-message-two" class="hidden rounded border border-violet-300 bg-white px-2 py-1 font-mono text-xs dark:border-violet-800 dark:bg-slate-900">1 · S481-M2</span>
-              </div>
-            </div>
-          </div>
-
-          <div id="lite-deleted" class="mt-3 hidden rounded-lg border border-amber-300 bg-amber-50 p-4 text-center text-sm text-amber-900 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-200">
-            <strong><code>session-481</code> auto-deleted.</strong>
-            <p class="mt-1 text-xs">Its inactivity exceeded the configured TTL and its quota was released.</p>
-          </div>
-        </div>
-
-        <div class="mt-4 rounded-xl border border-stone-200 p-3 dark:border-slate-700">
-          <div class="flex items-center justify-between gap-2">
-            <strong class="text-sm">ConsumerGroup <code>session-workers</code></strong>
-            <span class="text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:text-violet-300">flexible child sets</span>
-          </div>
-          <div class="mt-3 grid gap-2 sm:grid-cols-2">
-            <div id="lite-consumer-one" class="rounded-lg bg-stone-100 p-2 text-xs text-stone-500 transition dark:bg-slate-900 dark:text-slate-400">
-              <strong class="text-stone-800 dark:text-slate-200">Consumer L1</strong>
-              <p id="lite-consumer-one-sub" class="mt-1 font-mono">no session-481 subscription</p>
-            </div>
-            <div class="rounded-lg bg-violet-50 p-2 text-xs dark:bg-violet-950/30">
-              <strong>Consumer L2</strong>
-              <p class="mt-1 font-mono text-violet-700 dark:text-violet-300">subscribed session-925</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="mt-4 grid grid-cols-2 gap-3">
-          <div class="rounded-xl bg-stone-100 p-3 dark:bg-slate-900">
-            <p class="text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Target child state</p>
-            <p id="lite-lifecycle" class="mt-1 font-semibold">Absent</p>
-          </div>
-          <div class="rounded-xl bg-stone-100 p-3 dark:bg-slate-900">
-            <p class="text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Per-channel parallelism</p>
-            <p class="mt-1 font-semibold">One queue</p>
-          </div>
-        </div>
-      </article>
-    </section>
-
-    <section
-      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
-      aria-labelledby="comparison-heading"
-    >
-      <p class="font-mono text-sm font-semibold text-violet-700 dark:text-violet-400">Trade-offs</p>
-      <h2 id="comparison-heading" class="text-xl font-semibold">Choose by channel shape</h2>
-      <div class="mt-4 overflow-x-auto">
-        <table class="w-full min-w-[42rem] border-collapse text-left text-sm">
-          <thead>
-            <tr class="border-b border-stone-300 dark:border-slate-600">
-              <th class="px-3 py-2 font-semibold">Dimension</th>
-              <th class="px-3 py-2 font-semibold text-sky-800 dark:text-sky-300">Normal Topic</th>
-              <th class="px-3 py-2 font-semibold text-violet-800 dark:text-violet-300">LiteTopic</th>
-            </tr>
-          </thead>
-          <tbody>
-            {comparisonRows.map(([dimension, normal, lite]) => (
-              <tr class="border-b border-stone-200 align-top last:border-0 dark:border-slate-700">
-                <th class="px-3 py-3 font-semibold">{dimension}</th>
-                <td class="px-3 py-3 text-stone-600 dark:text-slate-300">{normal}</td>
-                <td class="px-3 py-3 text-stone-600 dark:text-slate-300">{lite}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </section>
-
-    <section class="mt-6 grid gap-4 lg:grid-cols-2">
-      <article class="rounded-2xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950/30 sm:p-5">
-        <h2 class="font-semibold text-sky-950 dark:text-sky-100">Prefer a normal Topic when…</h2>
-        <p class="mt-2 text-sm text-sky-900 dark:text-sky-200">
-          the workload is a stable shared business stream and throughput should scale horizontally
-          through several queues and broker nodes.
-        </p>
-      </article>
-      <article class="rounded-2xl border border-violet-200 bg-violet-50 p-4 dark:border-violet-900 dark:bg-violet-950/30 sm:p-5">
-        <h2 class="font-semibold text-violet-950 dark:text-violet-100">Prefer LiteTopics when…</h2>
-        <p class="mt-2 text-sm text-violet-900 dark:text-violet-200">
-          the parent business stream needs very many fine-grained, ephemeral, independently ordered
-          channels such as sessions, tasks, or users.
-        </p>
-      </article>
-    </section>
-
-    <section class="mt-6 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
-      <strong>Model boundary:</strong> the normal-topic routing shown above is illustrative. Normal
-      Topics can provide ordered subsets through FIFO/message-group semantics or deliberate
-      partitioning. LiteTopic support requires RocketMQ Server 5.5.0+ and RocketMQ gRPC client 5.1.0+.
-    </section>
+    <details open class="mt-3 rounded-xl border border-stone-300 p-4 text-sm dark:border-slate-600">
+      <summary class="cursor-pointer font-semibold">Experiments that reveal the difference</summary>
+      <ol class="mt-2 list-decimal space-y-1 pl-5">
+        <li>Send two events for session 481. The LiteTopic appears, but L1 still cannot consume until you subscribe it.</li>
+        <li>Consume shared messages: the normal-message example can deliver the second event first. Reset, select FIFO, and repeat to preserve the session's order without LiteTopics.</li>
+        <li>Unsubscribe L1. The child stays. Advance the clock: expiry follows the last send (or creation), not the unsubscribe button.</li>
+        <li>Create both children. Keep sending to 925 while advancing time. Only the idle child expires. Send to the expired child to create it again.</li>
+      </ol>
+    </details>
+    <details class="mt-3 rounded-xl border border-stone-300 p-4 text-sm dark:border-slate-600">
+      <summary class="cursor-pointer font-semibold">Scope and sources</summary>
+      <p class="mt-2">LiteTopics require RocketMQ Server 5.5.0+ and the gRPC client 5.1.0+ per the linked documentation. Parents are created in advance; a LiteTopic is created on first send or subscription. Each contains one queue by default. Sending restarts its idle clock. Consumption and unsubscribing do not send new messages.</p>
+      <p class="mt-2">The clock is manual. Expiry is shown at the first time step past TTL; real cleanup is asynchronous. Subscription selections represent client intent; reconnect and subscription recovery are outside this demo. On re-creation, offset 0 belongs to a new child generation, not the deleted queue.</p>
+      <p class="mt-2">The non-Lite FIFO example uses serial sends by one producer and ordered processing for each message group. Normal-mode queue routing and delivery order are illustrative choices. Each Consume click combines receive, processing, and successful acknowledgement. Delivery retries and storage retention are omitted; consumed records remain visible until the child expires. Up to 12 sends can be explored before reset.</p>
+      <p class="mt-2">Sources: <a class="text-sky-700 underline dark:text-sky-300" href="https://rocketmq.apache.org/docs/domainModel/03litetopic/">LiteTopic domain model</a>, <a class="text-sky-700 underline dark:text-sky-300" href="https://rocketmq.apache.org/docs/featureBehavior/03fifomessage/">FIFO and message groups</a>. Explore <a class="text-sky-700 underline dark:text-sky-300" href="/rocketmq/message-trace/">receive / process / ACK</a> separately.</p>
+    </details>
+    <noscript><p class="mt-4">Enable JavaScript to run the simulation.</p></noscript>
   </main>
 </BaseLayout>
 
 <script>
-  function setupLiteTopicDemo() {
-    const root = document.querySelector<HTMLElement>("#litetopic-demo");
+  function setupLiteTopics() {
+    const root = document.querySelector<HTMLElement>("#mq-litetopic");
     if (!root || root.dataset.ready) return;
     root.dataset.ready = "true";
-
+    type Session = "481" | "925";
+    type Message = { session: Session; sequence: number; offset: number; queue: number; consumed: boolean };
+    type Child = { lastSend: number; generation: number; messages: Message[] };
+    type State = { time: number; mode: "normal" | "fifo"; shared: Message[]; children: Record<Session, Child | null>; subscribed: Record<Session, boolean>; generations: Record<Session, number>; sent: Record<Session, number>; event: string; sharedDelivery: string; liteDelivery: string; deliveries: number };
+    const sessions: Session[] = ["481", "925"];
+    const initial = (): State => ({ time: 0, mode: "normal", shared: [], children: { "481": null, "925": null }, subscribed: { "481": false, "925": false }, generations: { "481": 0, "925": 0 }, sent: { "481": 0, "925": 0 }, event: "Both parent topics exist. Send creates a LiteTopic child, but does not subscribe a consumer.", sharedDelivery: "No delivery yet.", liteDelivery: "No delivery yet.", deliveries: 0 });
+    let state = initial();
+    const history: State[] = [];
     const find = <T extends Element>(selector: string) => root.querySelector<T>(selector)!;
-    const firstButton = find<HTMLButtonElement>("#send-first");
-    const secondButton = find<HTMLButtonElement>("#send-second");
-    const expireButton = find<HTMLButtonElement>("#expire-litetopic");
-    const normalPanel = find<HTMLElement>("#normal-panel");
-    const litePanel = find<HTMLElement>("#lite-panel");
-
-    let phase = 0;
-
-    const activeRingClasses = [
-      "ring-4",
-      "ring-violet-300",
-      "ring-offset-2",
-      "dark:ring-violet-800",
-      "dark:ring-offset-slate-900",
-    ];
-
-    function animate(element: HTMLElement) {
-      element.animate(
-        [
-          { transform: "scale(0.985)", opacity: "0.65" },
-          { transform: "scale(1)", opacity: "1" },
-        ],
-        {
-          duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 350,
-          easing: "ease-out",
-        },
-      );
+    const put = (selector: string, value: string) => { find<HTMLElement>(selector).textContent = value; };
+    const name = (m: Message) => `S${m.session}-M${m.sequence}`;
+    const messageRow = (m: Message) => `<li class="rounded border border-stone-300 px-2 py-1 dark:border-slate-600"><span class="font-mono">${m.offset} · ${name(m)}</span><span class="block ${m.consumed ? "text-green-800 dark:text-green-300" : "text-stone-600 dark:text-slate-300"}">${m.consumed ? "Acknowledged · stored" : "Pending"}</span></li>`;
+    function save() { history.push(structuredClone(state)); if (history.length > 80) history.shift(); }
+    function createChild(id: Session) {
+      if (!state.children[id]) state.children[id] = { lastSend: state.time, generation: ++state.generations[id], messages: [] };
+      return state.children[id]!;
     }
 
-    function setStatus(text: string, tone: "normal" | "success" | "warning") {
-      const status = find<HTMLElement>("#comparison-status");
-      status.textContent = text;
-      status.className =
-        tone === "warning"
-          ? "rounded-full bg-amber-100 px-3 py-1 font-mono text-xs font-bold text-amber-700 dark:bg-amber-950 dark:text-amber-300"
-          : tone === "success"
-            ? "rounded-full bg-green-100 px-3 py-1 font-mono text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-300"
-            : "rounded-full bg-violet-100 px-3 py-1 font-mono text-xs font-bold text-violet-700 dark:bg-violet-950 dark:text-violet-300";
-    }
-
-    function setExplanation(title: string, detail: string) {
-      find<HTMLElement>("#comparison-title").textContent = title;
-      find<HTMLElement>("#comparison-explanation").textContent = detail;
-    }
-
-    function setActiveStep(step: number) {
-      const stepIds = ["#step-create", "#step-order", "#step-expire"];
-      for (const [index, id] of stepIds.entries()) {
-        const element = find<HTMLElement>(id);
-        element.className =
-          index + 1 < step
-            ? "rounded-full bg-green-100 px-3 py-1 font-mono text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-300"
-            : index + 1 === step
-              ? "rounded-full bg-violet-700 px-3 py-1 font-mono text-xs font-bold text-white dark:bg-violet-600"
-              : "rounded-full bg-stone-100 px-3 py-1 font-mono text-xs text-stone-500 dark:bg-slate-900 dark:text-slate-400";
+    function render() {
+      put("#lite-clock", `t = ${state.time} min`);
+      put("#lite-event", state.event);
+      const select = find<HTMLSelectElement>("#shared-mode");
+      select.value = state.mode;
+      select.disabled = state.shared.length > 0;
+      put("#shared-rule", state.mode === "normal" ? "Session identity is message data. The example distributes events across shared queues; it does not guarantee session order." : "FIFO topic: messageGroup = sessionId. Each session stays in one shared queue and is processed in order; there is still no child resource or per-session TTL.");
+      put("#shared-delivery", state.sharedDelivery);
+      put("#lite-delivery", state.liteDelivery);
+      put("#lite-count", `Active child channels: ${sessions.filter(id => state.children[id]).length}`);
+      for (let q = 0; q < 4; q++) find<HTMLElement>(`#shared-q${q}`).innerHTML = state.shared.filter(m => m.queue === q).map(messageRow).join("") || "<li>Empty</li>";
+      for (const id of sessions) {
+        const child = state.children[id];
+        const worker = id === "481" ? "L1" : "L2";
+        put(`#child-status-${id}`, child ? `Generation ${child.generation} · Q0\nIdle: ${state.time - child.lastSend} min / TTL 60 min\n${child.messages.length ? "Since last send" : "Since creation; no send yet"}` : state.generations[id] ? "Expired · child quota released" : "Absent");
+        find<HTMLElement>(`#child-status-${id}`).classList.add("whitespace-pre-line");
+        find<HTMLElement>(`#child-messages-${id}`).innerHTML = child ? child.messages.map(messageRow).join("") || "<li>Queue empty</li>" : "";
+        const subscribe = find<HTMLButtonElement>(`[data-action="subscribe"][data-session="${id}"]`);
+        subscribe.textContent = `${state.subscribed[id] ? "Unsubscribe" : "Subscribe"} ${worker} ${state.subscribed[id] ? "from" : "to"} ${id}`;
+        put(`#subscription-${id}`, state.subscribed[id] ? `Client selection: session-${id}${child ? "" : " · child expired; a send can recreate it"}.` : "No subscription selected.");
+        find<HTMLButtonElement>(`[data-action="consume-lite"][data-session="${id}"]`).disabled = !state.subscribed[id] || !child?.messages.some(m => !m.consumed);
+        find<HTMLButtonElement>(`[data-action="send"][data-session="${id}"]`).disabled = state.shared.length >= 12;
       }
+      find<HTMLButtonElement>('[data-action="consume-shared"]').disabled = !state.shared.some(m => !m.consumed);
+      find<HTMLButtonElement>('[data-action="undo"]').disabled = !history.length;
     }
 
-    function highlight(element: HTMLElement) {
-      normalPanel.classList.remove(...activeRingClasses);
-      litePanel.classList.remove(...activeRingClasses);
-      element.classList.add(...activeRingClasses);
-      animate(element);
-    }
-
-    firstButton.addEventListener("click", () => {
-      if (phase !== 0) return;
-      phase = 1;
-      firstButton.disabled = true;
-      secondButton.disabled = false;
-
-      find<HTMLElement>("#normal-q1-empty").classList.add("hidden");
-      find<HTMLElement>("#normal-message-one").classList.remove("hidden");
-      find<HTMLElement>("#normal-message-model").classList.remove("hidden");
-      find<HTMLElement>("#lite-empty").classList.add("hidden");
-      find<HTMLElement>("#lite-deleted").classList.add("hidden");
-      find<HTMLElement>("#lite-session").classList.remove("hidden");
-      find<HTMLElement>("#lite-message-one").classList.remove("hidden");
-      find<HTMLElement>("#active-lite-count").textContent = "2";
-      find<HTMLElement>("#lite-lifecycle").textContent = "Active · TTL 30 min";
-      find<HTMLElement>("#lite-consumer-one-sub").textContent = "subscribed session-481";
-      find<HTMLElement>("#lite-consumer-one").className =
-        "rounded-lg bg-violet-50 p-2 text-xs transition dark:bg-violet-950/30";
-
-      setStatus("AUTO-CREATED", "normal");
-      setActiveStep(1);
-      setExplanation(
-        "The first send exposed the structural difference",
-        "The normal Topic stored sessionId as message data in shared Q1. The Lite-type Topic auto-created child session-481 and its dedicated Q0.",
-      );
-      highlight(litePanel);
-      animate(find<HTMLElement>("#normal-q1"));
-      animate(find<HTMLElement>("#lite-session"));
+    find<HTMLSelectElement>("#shared-mode").addEventListener("change", event => {
+      save(); state.mode = (event.target as HTMLSelectElement).value as State["mode"];
+      state.event = `Selected ${state.mode === "fifo" ? "a FIFO topic with a message group per session" : "normal messages"} for the non-Lite example. Send the same events to compare.`;
+      render();
     });
-
-    secondButton.addEventListener("click", () => {
-      if (phase !== 1) return;
-      phase = 2;
-      secondButton.disabled = true;
-      expireButton.disabled = false;
-
-      find<HTMLElement>("#normal-q3-empty").classList.add("hidden");
-      find<HTMLElement>("#normal-message-two").classList.remove("hidden");
-      find<HTMLElement>("#lite-message-two").classList.remove("hidden");
-      find<HTMLElement>("#ttl-value").textContent = "30 min · reset";
-
-      setStatus("FOLLOW-UP STORED", "success");
-      setActiveStep(2);
-      setExplanation(
-        "LiteTopic preserves a session-local ordered lane",
-        "The illustrative normal route placed the follow-up in another shared queue. LiteTopic session-481 appended it at Q0 offset 1 and reset its inactivity clock.",
-      );
-      highlight(litePanel);
-      animate(find<HTMLElement>("#normal-q3"));
-      animate(find<HTMLElement>("#lite-session"));
+    root.addEventListener("click", event => {
+      const button = (event.target as Element).closest<HTMLButtonElement>("button[data-action]");
+      if (!button || button.disabled) return;
+      const action = button.dataset.action;
+      if (action === "reset") { state = initial(); history.length = 0; render(); return; }
+      if (action === "undo") { const previous = history.pop(); if (previous) state = previous; render(); return; }
+      save();
+      const id = button.dataset.session as Session;
+      if (action === "send" && sessions.includes(id)) {
+        const existed = !!state.children[id];
+        const sequence = ++state.sent[id];
+        const queue = state.mode === "fifo" ? id === "481" ? 1 : 2 : (state.shared.length + 1) % 4;
+        const message: Message = { session: id, sequence, queue, offset: state.shared.filter(m => m.queue === queue).length, consumed: false };
+        state.shared.push(message);
+        const child = createChild(id);
+        child.lastSend = state.time;
+        child.messages.push({ ...message, queue: 0, offset: child.messages.length });
+        state.event = `${name(message)} stored in both examples. ${existed ? "Restarted" : "Created child and started"} session-${id}'s idle clock. Consumer subscription selections did not change.`;
+      } else if (action === "subscribe" && sessions.includes(id)) {
+        state.subscribed[id] = !state.subscribed[id];
+        if (state.subscribed[id]) {
+          const existed = !!state.children[id]; createChild(id);
+          state.event = `Subscribed to session-${id}. ${existed ? "Existing child's idle clock is unchanged." : "First subscription created an empty child and started its idle clock."}`;
+        } else state.event = `Unsubscribed from session-${id}. This does not delete the child or restart its idle clock.`;
+      } else if (action === "time") {
+        state.time += 15;
+        const expired: string[] = [];
+        for (const session of sessions) {
+          const child = state.children[session];
+          if (child && state.time - child.lastSend > 60) { state.children[session] = null; expired.push(session); }
+        }
+        state.event = expired.length ? `TTL exceeded: removed child ${expired.join(" and ")} and released its quota. Other children use their own last-send times. Parent topics remain.` : "Clock advanced. No child has exceeded its idle TTL; subscription changes are separate from expiry.";
+      } else if (action === "consume-shared") {
+        // ponytail: fixed scheduler makes the possible cross-queue reorder reproducible, not a broker prediction.
+        const pending = state.shared.filter(m => !m.consumed);
+        const message = state.mode === "normal" ? [3, 2, 1, 0].flatMap(q => pending.filter(m => m.queue === q))[0] : pending[0];
+        if (message) {
+          message.consumed = true;
+          const worker = state.mode === "fifo" ? message.session === "481" ? "N1" : "N2" : `N${state.deliveries % 2 + 1}`;
+          state.deliveries++;
+          state.sharedDelivery = `Q${message.queue}:${message.offset} → ${worker}: ${name(message)} processed and acknowledged.`;
+          state.event = `${state.sharedDelivery} ${state.mode === "normal" ? "Different queues have no session-wide ordering guarantee." : "The earlier messages in this session were processed first."}`;
+        }
+      } else if (action === "consume-lite" && sessions.includes(id)) {
+        const message = state.children[id]?.messages.find(m => !m.consumed);
+        if (message && state.subscribed[id]) {
+          message.consumed = true;
+          state.liteDelivery = `session-${id} / Q0:${message.offset} → ${id === "481" ? "L1" : "L2"}: ${name(message)} processed and acknowledged.`;
+          state.event = `${state.liteDelivery} Consuming did not restart the last-send clock.`;
+        }
+      }
+      render();
     });
-
-    expireButton.addEventListener("click", () => {
-      if (phase !== 2) return;
-      phase = 3;
-      expireButton.disabled = true;
-
-      find<HTMLElement>("#lite-session").classList.add("hidden");
-      find<HTMLElement>("#lite-deleted").classList.remove("hidden");
-      find<HTMLElement>("#active-lite-count").textContent = "1";
-      find<HTMLElement>("#lite-lifecycle").textContent = "Deleted · quota released";
-      find<HTMLElement>("#lite-consumer-one-sub").textContent = "subscription removed · child absent";
-      find<HTMLElement>("#lite-consumer-one").className =
-        "rounded-lg bg-stone-100 p-2 text-xs text-stone-500 transition dark:bg-slate-900 dark:text-slate-400";
-      find<HTMLElement>("#normal-lifecycle").textContent = "Topic remains · no child TTL";
-
-      setStatus("LITETOPIC EXPIRED", "warning");
-      setActiveStep(3);
-      setExplanation(
-        "Idle TTL removed only the ephemeral child",
-        "Consumer L1 removed its dynamic subscription, then session-481 received no messages for its TTL. The child was deleted and its quota released; the normal Topic follows its separate retention and resource lifecycle policies.",
-      );
-      highlight(litePanel);
-      animate(find<HTMLElement>("#lite-deleted"));
-    });
-
-    find<HTMLButtonElement>("#reset-comparison").addEventListener("click", () => {
-      phase = 0;
-      firstButton.disabled = false;
-      secondButton.disabled = true;
-      expireButton.disabled = true;
-      normalPanel.classList.remove(...activeRingClasses);
-      litePanel.classList.remove(...activeRingClasses);
-
-      find<HTMLElement>("#normal-q1-empty").classList.remove("hidden");
-      find<HTMLElement>("#normal-q3-empty").classList.remove("hidden");
-      find<HTMLElement>("#normal-message-one").classList.add("hidden");
-      find<HTMLElement>("#normal-message-two").classList.add("hidden");
-      find<HTMLElement>("#normal-message-model").classList.add("hidden");
-      find<HTMLElement>("#normal-lifecycle").textContent = "Topic remains";
-
-      find<HTMLElement>("#lite-empty").classList.remove("hidden");
-      find<HTMLElement>("#lite-session").classList.add("hidden");
-      find<HTMLElement>("#lite-deleted").classList.add("hidden");
-      find<HTMLElement>("#lite-message-one").classList.add("hidden");
-      find<HTMLElement>("#lite-message-two").classList.add("hidden");
-      find<HTMLElement>("#active-lite-count").textContent = "1";
-      find<HTMLElement>("#ttl-value").textContent = "30 min";
-      find<HTMLElement>("#lite-lifecycle").textContent = "Absent";
-      find<HTMLElement>("#lite-consumer-one-sub").textContent = "no session-481 subscription";
-      find<HTMLElement>("#lite-consumer-one").className =
-        "rounded-lg bg-stone-100 p-2 text-xs text-stone-500 transition dark:bg-slate-900 dark:text-slate-400";
-
-      find<HTMLElement>("#comparison-status").textContent = "READY";
-      find<HTMLElement>("#comparison-status").className =
-        "rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-700 dark:bg-slate-700 dark:text-slate-200";
-      setActiveStep(0);
-      setExplanation(
-        "The parent resources already exist",
-        "The normal Topic owns four shared queues. The Lite-type parent contains one unrelated active child; session-481 does not exist yet.",
-      );
-    });
-
-    setActiveStep(0);
+    render();
   }
-
-  document.addEventListener("astro:page-load", setupLiteTopicDemo);
+  setupLiteTopics();
+  document.addEventListener("astro:page-load", setupLiteTopics);
 </script>
