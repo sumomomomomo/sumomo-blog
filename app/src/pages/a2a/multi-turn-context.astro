@@ -1,0 +1,486 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const rules = [
+  {
+    label: "New conversation",
+    request: "No taskId or contextId",
+    result: "The server creates Task.id and may create contextId.",
+  },
+  {
+    label: "Continue one Task",
+    request: "Message.taskId = existing Task.id",
+    result: "The server continues that Task and infers its contextId when omitted.",
+  },
+  {
+    label: "Start a related Task",
+    request: "contextId without taskId",
+    result: "The server creates a new Task inside the existing conversation context.",
+  },
+  {
+    label: "Mismatched identifiers",
+    request: "taskId and contextId point to different contexts",
+    result: "The server must reject the Message.",
+  },
+] as const;
+
+const actionClass =
+  "rounded-lg px-4 py-2.5 font-semibold transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:focus:ring-offset-slate-800";
+---
+
+<BaseLayout title="A2A Multi-Turn Context" activePage="">
+  <main id="context-demo" class="mx-auto max-w-5xl py-8">
+    <header class="mb-8 max-w-3xl">
+      <p class="mb-2 font-mono text-sm font-semibold text-green-700 dark:text-green-400">
+        A2A Protocol · 3.4.1 · 3.4.2 · 3.4.3
+      </p>
+      <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">Task and Context Identity</h1>
+      <p class="mt-3 text-stone-600 dark:text-slate-300">
+        See how <code>Task.id</code>, <code>Message.taskId</code>, and
+        <code>contextId</code> connect Messages and Tasks across a multi-turn interaction.
+      </p>
+    </header>
+
+    <section
+      class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="rules-heading"
+    >
+      <div class="mb-4">
+        <p class="font-mono text-sm font-semibold text-green-700 dark:text-green-400">Identity rules</p>
+        <h2 id="rules-heading" class="text-xl font-semibold">What each identifier means</h2>
+      </div>
+
+      <div class="grid gap-3 sm:grid-cols-2">
+        <div class="rounded-xl border-2 border-violet-300 bg-violet-50 p-4 dark:border-violet-800 dark:bg-violet-950/30">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <code class="font-bold text-violet-800 dark:text-violet-300">contextId</code>
+            <span class="rounded-full bg-violet-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:bg-violet-950 dark:text-violet-300">
+              conversation scope
+            </span>
+          </div>
+          <p class="mt-2 text-sm text-violet-950 dark:text-violet-100">
+            Logically groups related <span data-spec="task">Tasks</span> and
+            <span data-spec="message">Messages</span>. Several Tasks can share one context.
+          </p>
+        </div>
+
+        <div class="rounded-xl border-2 border-green-300 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/30">
+          <div class="flex flex-wrap items-center justify-between gap-2">
+            <code class="font-bold text-green-800 dark:text-green-300">Task.id ↔ Message.taskId</code>
+            <span class="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700 dark:bg-green-950 dark:text-green-300">
+              task scope
+            </span>
+          </div>
+          <p class="mt-2 text-sm text-green-950 dark:text-green-100">
+            <code>Task.id</code> names one server-created lifecycle. A later
+            <code>Message.taskId</code> refers back to that same Task.
+          </p>
+        </div>
+      </div>
+
+      <div class="mt-3 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        {rules.map((rule, index) => (
+          <article class="rounded-lg border border-stone-200 bg-stone-50 p-3 dark:border-slate-700 dark:bg-slate-900">
+            <p class="font-mono text-[10px] font-bold uppercase tracking-wide text-stone-400 dark:text-slate-500">
+              Scenario {index + 1}
+            </p>
+            <h3 class="mt-1 text-sm font-bold">{rule.label}</h3>
+            <p class="mt-2 font-mono text-xs text-sky-700 dark:text-sky-300">{rule.request}</p>
+            <p class="mt-2 text-xs leading-relaxed text-stone-600 dark:text-slate-300">{rule.result}</p>
+          </article>
+        ))}
+      </div>
+    </section>
+
+    <section
+      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="map-heading"
+    >
+      <div class="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p class="font-mono text-sm font-semibold text-green-700 dark:text-green-400">3.4</p>
+          <h2 id="map-heading" class="text-xl font-semibold">Multi-turn identity map</h2>
+        </div>
+        <span
+          id="scenario-badge"
+          class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-700 dark:bg-slate-700 dark:text-slate-200"
+          aria-live="polite"
+        >
+          READY
+        </span>
+      </div>
+
+      <div class="grid items-stretch gap-4 lg:grid-cols-[13rem_3rem_1fr]">
+        <section class="rounded-xl border-2 border-green-300 bg-green-50 p-4 dark:border-green-800 dark:bg-green-950/30" aria-labelledby="client-heading">
+          <p class="font-mono text-[10px] font-bold uppercase tracking-wide text-green-700 dark:text-green-400">Sender</p>
+          <h3 id="client-heading" class="mt-1 font-bold">Client agent</h3>
+          <p id="client-action" class="mt-4 text-sm text-green-950 dark:text-green-100">
+            Choose an action below.
+          </p>
+          <div id="outgoing-identifiers" class="mt-3 hidden rounded-lg bg-white/70 p-3 font-mono text-xs text-green-900 dark:bg-slate-950/60 dark:text-green-200"></div>
+        </section>
+
+        <div class="flex items-center justify-center" aria-hidden="true">
+          <span class="rotate-90 text-4xl text-stone-300 dark:text-slate-600 lg:rotate-0">→</span>
+        </div>
+
+        <section class="rounded-xl border-2 border-violet-300 bg-violet-50/50 p-4 dark:border-violet-800 dark:bg-violet-950/20" aria-labelledby="server-heading">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="font-mono text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:text-violet-400">Receiver and owner</p>
+              <h3 id="server-heading" class="mt-1 font-bold">Server agent</h3>
+            </div>
+            <span class="rounded-full bg-violet-100 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:bg-violet-950 dark:text-violet-300">
+              identifiers are opaque
+            </span>
+          </div>
+
+          <div id="empty-context" class="mt-4 rounded-xl border border-dashed border-violet-300 p-8 text-center text-sm text-violet-700 dark:border-violet-800 dark:text-violet-300">
+            No conversation context exists yet.
+          </div>
+
+          <div id="context-shell" class="mt-4 hidden rounded-xl border-2 border-violet-500 bg-white/70 p-4 dark:bg-slate-950/50">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span class="font-mono text-xs font-bold text-violet-700 dark:text-violet-300">Conversation context</span>
+                <p class="mt-1 font-mono text-sm"><span class="text-stone-500 dark:text-slate-400">contextId</span> <strong id="context-id">ctx-01</strong></p>
+              </div>
+              <span class="rounded-full bg-violet-100 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:bg-violet-950 dark:text-violet-300">
+                logical grouping
+              </span>
+            </div>
+
+            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+              <article id="task-a" class="hidden rounded-xl border-2 border-green-500 bg-green-50 p-3 dark:bg-green-950/30">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <h4 class="font-bold">Task A</h4>
+                  <span class="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-green-700 dark:bg-green-950 dark:text-green-300">one lifecycle</span>
+                </div>
+                <p class="mt-2 font-mono text-xs"><span class="text-stone-500 dark:text-slate-400">Task.id</span> <strong id="task-a-id">task-A</strong></p>
+                <div class="mt-3 space-y-2 border-t border-green-200 pt-3 dark:border-green-900">
+                  <div id="task-a-initial" class="hidden rounded-lg bg-white px-3 py-2 text-xs dark:bg-slate-900">
+                    <strong>Initial Message</strong>
+                    <p class="mt-0.5 text-stone-500 dark:text-slate-400">Sent without taskId or contextId</p>
+                  </div>
+                  <div id="task-a-follow-up" class="hidden rounded-lg bg-white px-3 py-2 text-xs dark:bg-slate-900">
+                    <strong>Follow-up Message</strong>
+                    <p class="mt-0.5 font-mono text-stone-500 dark:text-slate-400">taskId = task-A</p>
+                  </div>
+                </div>
+              </article>
+
+              <article id="task-b" class="hidden rounded-xl border-2 border-sky-500 bg-sky-50 p-3 dark:bg-sky-950/30">
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <h4 class="font-bold">Task B</h4>
+                  <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-700 dark:bg-sky-950 dark:text-sky-300">separate lifecycle</span>
+                </div>
+                <p class="mt-2 font-mono text-xs"><span class="text-stone-500 dark:text-slate-400">Task.id</span> <strong id="task-b-id">task-B</strong></p>
+                <div class="mt-3 border-t border-sky-200 pt-3 dark:border-sky-900">
+                  <div class="rounded-lg bg-white px-3 py-2 text-xs dark:bg-slate-900">
+                    <strong>Related new request</strong>
+                    <p class="mt-0.5 font-mono text-stone-500 dark:text-slate-400">contextId = ctx-01</p>
+                    <p class="mt-0.5 font-mono text-stone-500 dark:text-slate-400">referenceTaskIds = [task-A]</p>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <div id="identity-link" class="mt-3 hidden rounded-lg border border-green-300 bg-green-50 p-3 text-center font-mono text-xs text-green-800 dark:border-green-800 dark:bg-green-950/30 dark:text-green-300">
+              Task.id <strong>task-A</strong> = follow-up Message.taskId <strong>task-A</strong>
+            </div>
+          </div>
+
+          <div id="mismatch-warning" class="mt-3 hidden rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-800 dark:border-red-800 dark:bg-red-950/30 dark:text-red-300" role="alert">
+            <strong>Rejected:</strong> <code>task-A</code> belongs to <code>ctx-01</code>, not
+            <code>ctx-99</code>.
+          </div>
+        </section>
+      </div>
+
+      <p id="scenario-explanation" class="mt-4 rounded-lg bg-stone-100 p-3 text-sm text-stone-600 dark:bg-slate-900 dark:text-slate-300" aria-live="polite">
+        Start a new conversation to let the server create the first identifiers.
+      </p>
+    </section>
+
+    <section
+      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="controls-heading"
+    >
+      <p class="font-mono text-sm font-semibold text-green-700 dark:text-green-400">Simulation</p>
+      <h2 id="controls-heading" class="text-xl font-semibold">Choose an identifier pattern</h2>
+      <div class="mt-5 flex flex-wrap gap-3">
+        <button id="start-context" type="button" class={`${actionClass} bg-green-700 text-white hover:bg-green-800 focus:ring-green-600 dark:bg-green-600 dark:hover:bg-green-500`}>
+          1. Start new conversation
+        </button>
+        <button id="continue-task" type="button" disabled class={`${actionClass} bg-violet-700 text-white hover:bg-violet-800 focus:ring-violet-600 dark:bg-violet-600 dark:hover:bg-violet-500`}>
+          2. Continue Task A
+        </button>
+        <button id="related-task" type="button" disabled class={`${actionClass} bg-sky-700 text-white hover:bg-sky-800 focus:ring-sky-600 dark:bg-sky-600 dark:hover:bg-sky-500`}>
+          3. Start related Task
+        </button>
+        <button id="mismatch-ids" type="button" disabled class={`${actionClass} border border-red-300 bg-white text-red-700 hover:bg-red-50 focus:ring-red-500 dark:border-red-800 dark:bg-slate-900 dark:text-red-300 dark:hover:bg-red-950`}>
+          4. Try mismatched IDs
+        </button>
+        <button id="reset-context" type="button" class={`${actionClass} border border-stone-300 bg-white text-stone-700 hover:bg-stone-100 focus:ring-stone-400 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700`}>
+          Reset
+        </button>
+      </div>
+    </section>
+
+    <section
+      class="mt-6 rounded-2xl border border-stone-200 bg-stone-50 p-4 text-stone-800 shadow-sm dark:border-slate-700 dark:bg-stone-950 dark:text-slate-100 sm:p-6"
+      aria-labelledby="exchange-heading"
+    >
+      <div class="mb-3 flex flex-wrap items-center justify-between gap-3">
+        <h2 id="exchange-heading" class="text-lg font-semibold">Last operation</h2>
+        <span id="operation-badge" class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-600 dark:bg-slate-800 dark:text-slate-300">None</span>
+      </div>
+      <div class="grid gap-4 lg:grid-cols-2">
+        <section class="min-w-0">
+          <p class="mb-2 font-mono text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Client → Server</p>
+          <div id="request-tree" class="max-h-[34rem] overflow-auto font-mono text-sm text-slate-400">
+            Choose an action to begin.
+          </div>
+        </section>
+        <section class="min-w-0">
+          <p class="mb-2 font-mono text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Server → Client</p>
+          <div id="response-tree" class="max-h-[34rem] overflow-auto font-mono text-sm text-slate-400">
+            Choose an action to begin.
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  import {
+    clearSpecPopovers,
+    renderDataTree,
+    setupSpecPopovers,
+  } from "../../utils/render-data-tree";
+
+  interface DemoMessage {
+    messageId: string;
+    role: "ROLE_USER";
+    parts: { text: string }[];
+    taskId?: string;
+    contextId?: string;
+    referenceTaskIds?: string[];
+  }
+
+  interface DemoTask {
+    id: string;
+    contextId: string;
+    status: {
+      state: "TASK_STATE_SUBMITTED" | "TASK_STATE_WORKING";
+      timestamp: string;
+    };
+    history: DemoMessage[];
+  }
+
+  function setupContextDemo() {
+    const root = document.querySelector<HTMLElement>("#context-demo");
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = "true";
+
+    const find = <T extends Element>(selector: string) => root.querySelector<T>(selector)!;
+    const startButton = find<HTMLButtonElement>("#start-context");
+    const continueButton = find<HTMLButtonElement>("#continue-task");
+    const relatedButton = find<HTMLButtonElement>("#related-task");
+    const mismatchButton = find<HTMLButtonElement>("#mismatch-ids");
+    const requestOutput = find<HTMLElement>("#request-tree");
+    const responseOutput = find<HTMLElement>("#response-tree");
+
+    let contextId: string | undefined;
+    let taskA: DemoTask | undefined;
+    let taskB: DemoTask | undefined;
+    let continued = false;
+    let messageNumber = 0;
+
+    const nextMessageId = () => `msg-${String(++messageNumber).padStart(2, "0")}`;
+    const now = () => new Date().toISOString();
+
+    function makeMessage(text: string, identifiers: Partial<DemoMessage> = {}): DemoMessage {
+      return {
+        messageId: nextMessageId(),
+        role: "ROLE_USER",
+        parts: [{ text }],
+        ...identifiers,
+      };
+    }
+
+    function animateCard(selector: string) {
+      const card = find<HTMLElement>(selector);
+      card.animate(
+        [
+          { transform: "scale(0.98)", opacity: "0.55" },
+          { transform: "scale(1)", opacity: "1" },
+        ],
+        {
+          duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 350,
+          easing: "ease-out",
+        },
+      );
+    }
+
+    function showOperation(
+      operation: string,
+      requestType: string,
+      request: object,
+      responseType: string,
+      response: object,
+      explanation: string,
+      outgoingIdentifiers: string,
+      error = false,
+    ) {
+      find<HTMLElement>("#operation-badge").textContent = operation;
+      find<HTMLElement>("#scenario-badge").textContent = error ? "REJECTED" : operation.toUpperCase();
+      find<HTMLElement>("#scenario-badge").className = error
+        ? "rounded-full bg-red-100 px-3 py-1 font-mono text-xs font-bold text-red-700 dark:bg-red-950 dark:text-red-300"
+        : "rounded-full bg-green-100 px-3 py-1 font-mono text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-300";
+      find<HTMLElement>("#client-action").textContent = operation;
+      const outgoing = find<HTMLElement>("#outgoing-identifiers");
+      outgoing.textContent = outgoingIdentifiers;
+      outgoing.classList.remove("hidden");
+      find<HTMLElement>("#scenario-explanation").textContent = explanation;
+      find<HTMLElement>("#mismatch-warning").classList.toggle("hidden", !error);
+      renderDataTree(requestOutput, request, requestType);
+      renderDataTree(responseOutput, response, responseType);
+    }
+
+    function renderMap() {
+      find<HTMLElement>("#empty-context").classList.toggle("hidden", Boolean(contextId));
+      find<HTMLElement>("#context-shell").classList.toggle("hidden", !contextId);
+      if (contextId) find<HTMLElement>("#context-id").textContent = contextId;
+      find<HTMLElement>("#task-a").classList.toggle("hidden", !taskA);
+      find<HTMLElement>("#task-a-initial").classList.toggle("hidden", !taskA);
+      find<HTMLElement>("#task-a-follow-up").classList.toggle("hidden", !continued);
+      find<HTMLElement>("#identity-link").classList.toggle("hidden", !continued);
+      find<HTMLElement>("#task-b").classList.toggle("hidden", !taskB);
+      startButton.disabled = Boolean(contextId);
+      continueButton.disabled = !taskA || continued;
+      relatedButton.disabled = !taskA || Boolean(taskB);
+      mismatchButton.disabled = !taskA;
+    }
+
+    startButton.addEventListener("click", () => {
+      const initialMessage = makeMessage("Plan a weekend in Kyoto");
+      const request = { message: initialMessage };
+      contextId = "ctx-01";
+      taskA = {
+        id: "task-A",
+        contextId,
+        status: { state: "TASK_STATE_SUBMITTED", timestamp: now() },
+        history: [initialMessage],
+      };
+      renderMap();
+      showOperation(
+        "SendMessage · new conversation",
+        "SendMessageRequest",
+        request,
+        "SendMessageResponse",
+        { task: structuredClone(taskA) },
+        "The client supplied neither identifier. The server generated Task.id task-A and contextId ctx-01, then returned both in the Task.",
+        "taskId: omitted\ncontextId: omitted",
+      );
+      animateCard("#context-shell");
+      animateCard("#task-a");
+    });
+
+    continueButton.addEventListener("click", () => {
+      if (!taskA || !contextId) return;
+      const followUp = makeMessage("Make it a two-day itinerary", { taskId: taskA.id });
+      taskA.history.push(followUp);
+      taskA.status = { state: "TASK_STATE_WORKING", timestamp: now() };
+      continued = true;
+      renderMap();
+      showOperation(
+        "SendMessage · continue Task A",
+        "SendMessageRequest",
+        { message: followUp },
+        "SendMessageResponse",
+        { task: structuredClone(taskA) },
+        "Message.taskId matches Task.id. Because contextId was omitted, the server inferred ctx-01 from task-A and continued the same lifecycle.",
+        "taskId: task-A\ncontextId: omitted (inferred)",
+      );
+      animateCard("#task-a");
+      animateCard("#identity-link");
+    });
+
+    relatedButton.addEventListener("click", () => {
+      if (!taskA || !contextId) return;
+      const relatedMessage = makeMessage("Book restaurants for the same Kyoto trip", {
+        contextId,
+        referenceTaskIds: [taskA.id],
+      });
+      taskB = {
+        id: "task-B",
+        contextId,
+        status: { state: "TASK_STATE_SUBMITTED", timestamp: now() },
+        history: [relatedMessage],
+      };
+      renderMap();
+      showOperation(
+        "SendMessage · related Task",
+        "SendMessageRequest",
+        { message: relatedMessage },
+        "SendMessageResponse",
+        { task: structuredClone(taskB) },
+        "The Message reused ctx-01 but supplied no taskId, so the server created a separate Task B in the same conversation. referenceTaskIds explicitly relates it to Task A.",
+        "taskId: omitted\ncontextId: ctx-01\nreferenceTaskIds: [task-A]",
+      );
+      animateCard("#task-b");
+    });
+
+    mismatchButton.addEventListener("click", () => {
+      if (!taskA) return;
+      const invalidMessage = makeMessage("Continue the itinerary", {
+        taskId: taskA.id,
+        contextId: "ctx-99",
+      });
+      showOperation(
+        "SendMessage · mismatched IDs",
+        "SendMessageRequest",
+        { message: invalidMessage },
+        "ErrorResponse",
+        {
+          error: {
+            code: "InvalidParamsError",
+            message: "contextId ctx-99 does not match the context of task-A.",
+          },
+        },
+        "The server rejected the Message because task-A belongs to ctx-01. It must not silently replace either identifier.",
+        "taskId: task-A\ncontextId: ctx-99",
+        true,
+      );
+      animateCard("#mismatch-warning");
+    });
+
+    find<HTMLButtonElement>("#reset-context").addEventListener("click", () => {
+      contextId = undefined;
+      taskA = undefined;
+      taskB = undefined;
+      continued = false;
+      messageNumber = 0;
+      clearSpecPopovers();
+      find<HTMLElement>("#operation-badge").textContent = "None";
+      find<HTMLElement>("#scenario-badge").textContent = "READY";
+      find<HTMLElement>("#scenario-badge").className =
+        "rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-700 dark:bg-slate-700 dark:text-slate-200";
+      find<HTMLElement>("#client-action").textContent = "Choose an action below.";
+      find<HTMLElement>("#outgoing-identifiers").classList.add("hidden");
+      find<HTMLElement>("#mismatch-warning").classList.add("hidden");
+      find<HTMLElement>("#scenario-explanation").textContent =
+        "Start a new conversation to let the server create the first identifiers.";
+      requestOutput.textContent = "Choose an action to begin.";
+      responseOutput.textContent = "Choose an action to begin.";
+      renderMap();
+    });
+
+    setupSpecPopovers(root);
+    renderMap();
+  }
+
+  document.addEventListener("astro:page-load", setupContextDemo);
+</script>
