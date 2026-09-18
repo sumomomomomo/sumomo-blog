@@ -1,0 +1,734 @@
+---
+import BaseLayout from "../../layouts/BaseLayout.astro";
+
+const controlClass =
+  "rounded-lg border border-stone-300 bg-stone-50 px-3 py-2.5 text-sm text-stone-800 outline-none transition focus:border-sky-600 focus:ring-2 focus:ring-sky-300 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200";
+
+const concepts = [
+  {
+    term: "Topic",
+    meaning: "The logical container addressed by producers and subscriptions.",
+  },
+  {
+    term: "MessageQueue",
+    meaning: "The ordered storage partition that owns the message offset.",
+  },
+  {
+    term: "ConsumerGroup",
+    meaning: "An independent consumption identity with its own progress.",
+  },
+] as const;
+---
+
+<BaseLayout title="RocketMQ End-to-End Message Trace" activePage="">
+  <main id="rocketmq-trace" class="mx-auto max-w-6xl py-8">
+    <header class="mb-8 max-w-3xl">
+      <p class="mb-2 font-mono text-sm font-semibold text-sky-700 dark:text-sky-400">
+        Apache RocketMQ · Domain model
+      </p>
+      <h1 class="text-3xl font-bold tracking-tight sm:text-4xl">
+        One message, two independent consumer groups
+      </h1>
+      <p class="mt-3 text-stone-600 dark:text-slate-300">
+        Follow one immutable message from a producer into an ordered queue, then watch two
+        consumer groups advance through the same stored stream independently.
+      </p>
+    </header>
+
+    <section
+      class="rounded-2xl border border-sky-200 bg-sky-50 p-4 dark:border-sky-900 dark:bg-sky-950/30 sm:p-5"
+      aria-labelledby="central-idea-heading"
+    >
+      <p class="font-mono text-xs font-bold uppercase tracking-wide text-sky-700 dark:text-sky-400">
+        Central idea
+      </p>
+      <h2 id="central-idea-heading" class="mt-1 text-lg font-semibold text-sky-950 dark:text-sky-100">
+        One logical queue entry; delivery and progress are independent per group
+      </h2>
+      <p class="mt-2 text-sm text-sky-900 dark:text-sky-200">
+        Consumers inside one group share work. Different consumer groups maintain separate
+        subscriptions and consumption progress, so one group never advances another group’s
+        offset.
+      </p>
+    </section>
+
+    <section
+      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="controls-heading"
+    >
+      <div class="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="font-mono text-sm font-semibold text-sky-700 dark:text-sky-400">Simulation</p>
+          <h2 id="controls-heading" class="text-xl font-semibold">Trace the delivery</h2>
+        </div>
+        <span
+          id="phase-badge"
+          class="rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-700 dark:bg-slate-700 dark:text-slate-200"
+        >
+          READY
+        </span>
+      </div>
+
+      <div class="mt-5 flex flex-wrap items-end gap-3">
+        <label class="flex min-w-64 flex-1 flex-col gap-1.5">
+          <span class="font-semibold">Trace scenario</span>
+          <select id="trace-scenario" class={controlClass}>
+            <option value="success">Both groups acknowledge</option>
+            <option value="failure">Group A fails once, then retries</option>
+          </select>
+        </label>
+        <button
+          id="publish-message"
+          type="button"
+          class="rounded-lg bg-sky-700 px-4 py-2.5 font-semibold text-white transition hover:bg-sky-800 focus:outline-none focus:ring-2 focus:ring-sky-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-sky-600 dark:hover:bg-sky-500 dark:focus:ring-offset-slate-800"
+        >
+          Publish message
+        </button>
+        <button
+          id="next-step"
+          type="button"
+          disabled
+          class="rounded-lg bg-violet-700 px-4 py-2.5 font-semibold text-white transition hover:bg-violet-800 focus:outline-none focus:ring-2 focus:ring-violet-600 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-violet-600 dark:hover:bg-violet-500 dark:focus:ring-offset-slate-800"
+        >
+          Next step
+        </button>
+        <button
+          id="reset-trace"
+          type="button"
+          class="rounded-lg border border-stone-300 bg-white px-4 py-2.5 font-semibold text-stone-700 transition hover:bg-stone-100 focus:outline-none focus:ring-2 focus:ring-stone-400 focus:ring-offset-2 dark:border-slate-600 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-700 dark:focus:ring-offset-slate-800"
+        >
+          Reset
+        </button>
+      </div>
+
+      <div id="step-rail" class="mt-5 flex flex-wrap gap-2" aria-label="Trace steps"></div>
+      <div class="mt-4 rounded-xl bg-stone-100 p-4 dark:bg-slate-900" aria-live="polite">
+        <p id="phase-title" class="font-semibold">Ready to publish Message M-104</p>
+        <p id="phase-explanation" class="mt-1 text-sm text-stone-600 dark:text-slate-300">
+          The broker does not contain this message yet, and neither consumer group has seen it.
+        </p>
+      </div>
+    </section>
+
+    <section
+      class="mt-6 rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6"
+      aria-labelledby="trace-heading"
+    >
+      <div class="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <p class="font-mono text-sm font-semibold text-sky-700 dark:text-sky-400">Live topology</p>
+          <h2 id="trace-heading" class="text-xl font-semibold">Production, storage, and consumption</h2>
+        </div>
+        <p class="max-w-md text-sm text-stone-500 dark:text-slate-400">
+          This is the logical domain model. Broker files and internal index structures are intentionally omitted.
+        </p>
+      </div>
+
+      <div class="grid items-stretch gap-4 lg:grid-cols-[15rem_3rem_1fr]">
+        <article
+          id="producer-node"
+          class="rounded-xl border-2 border-amber-300 bg-amber-50 p-4 transition dark:border-amber-800 dark:bg-amber-950/30"
+        >
+          <div class="flex items-center justify-between gap-2">
+            <h3 class="font-bold">Producer</h3>
+            <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-amber-700 dark:bg-amber-950 dark:text-amber-300">
+              running entity
+            </span>
+          </div>
+          <p class="mt-2 text-sm text-amber-950 dark:text-amber-100">
+            The client creates and publishes a reusable, immutable business event.
+          </p>
+
+          <div id="producer-message" class="mt-4 hidden rounded-lg border border-amber-300 bg-white p-3 text-xs dark:border-amber-800 dark:bg-slate-900">
+            <div class="flex items-center justify-between gap-2">
+              <strong class="font-mono">Message M-104</strong>
+              <span class="rounded bg-stone-100 px-1.5 py-0.5 font-mono text-[10px] text-stone-600 dark:bg-slate-800 dark:text-slate-300">
+                immutable
+              </span>
+            </div>
+            <dl class="mt-2 grid grid-cols-[4.5rem_1fr] gap-x-2 gap-y-1 font-mono">
+              <dt class="text-stone-500 dark:text-slate-400">topic</dt>
+              <dd>orders</dd>
+              <dt class="text-stone-500 dark:text-slate-400">tag</dt>
+              <dd>order.created</dd>
+              <dt class="text-stone-500 dark:text-slate-400">body</dt>
+              <dd class="break-all">orderId: 481</dd>
+            </dl>
+          </div>
+        </article>
+
+        <div class="flex items-center justify-center" aria-hidden="true">
+          <span class="rotate-90 text-4xl text-stone-300 dark:text-slate-600 lg:rotate-0">→</span>
+        </div>
+
+        <article
+          id="topic-node"
+          class="rounded-xl border-2 border-sky-300 bg-sky-50/60 p-4 transition dark:border-sky-800 dark:bg-sky-950/20"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="font-mono text-[10px] font-bold uppercase tracking-wide text-sky-700 dark:text-sky-400">
+                Broker-side logical container
+              </p>
+              <h3 class="mt-1 font-bold">Topic <code>orders</code></h3>
+            </div>
+            <div class="text-right">
+              <p class="text-[10px] font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Logical queue entries for M-104</p>
+              <p id="stored-copy-count" class="font-mono text-xl font-bold text-sky-800 dark:text-sky-300">0</p>
+            </div>
+          </div>
+
+          <p class="mt-2 text-sm text-stone-600 dark:text-slate-300">
+            The Topic groups queues. The selected MessageQueue supplies the ordering position and offset.
+          </p>
+
+          <div class="mt-4 space-y-3">
+            <section class="rounded-lg border border-stone-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900" aria-label="MessageQueue Q0">
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <strong class="font-mono text-sm">MessageQueue Q0</strong>
+                <span class="text-xs text-stone-500 dark:text-slate-400">ordered lane</span>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="rounded border border-stone-200 bg-stone-50 px-2 py-1 font-mono text-xs dark:border-slate-700 dark:bg-slate-800">0 · M-100</span>
+                <span class="rounded border border-stone-200 bg-stone-50 px-2 py-1 font-mono text-xs dark:border-slate-700 dark:bg-slate-800">1 · M-102</span>
+              </div>
+            </section>
+
+            <section
+              id="queue-q1"
+              class="rounded-lg border-2 border-sky-300 bg-white p-3 transition dark:border-sky-800 dark:bg-slate-900"
+              aria-label="MessageQueue Q1"
+            >
+              <div class="mb-2 flex flex-wrap items-center justify-between gap-2">
+                <strong class="font-mono text-sm">MessageQueue Q1</strong>
+                <span class="rounded-full bg-sky-100 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-sky-700 dark:bg-sky-950 dark:text-sky-300">
+                  selected for this send
+                </span>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="rounded border border-stone-200 bg-stone-50 px-2 py-1 font-mono text-xs dark:border-slate-700 dark:bg-slate-800">0 · M-099</span>
+                <span class="rounded border border-stone-200 bg-stone-50 px-2 py-1 font-mono text-xs dark:border-slate-700 dark:bg-slate-800">1 · M-103</span>
+                <span
+                  id="queue-message"
+                  class="rounded border border-dashed border-stone-300 bg-stone-50 px-2 py-1 font-mono text-xs text-stone-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-500"
+                >
+                  2 · empty
+                </span>
+              </div>
+            </section>
+
+            <section class="rounded-lg border border-stone-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900" aria-label="MessageQueue Q2">
+              <div class="mb-2 flex items-center justify-between gap-2">
+                <strong class="font-mono text-sm">MessageQueue Q2</strong>
+                <span class="text-xs text-stone-500 dark:text-slate-400">ordered lane</span>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                <span class="rounded border border-stone-200 bg-stone-50 px-2 py-1 font-mono text-xs dark:border-slate-700 dark:bg-slate-800">0 · M-101</span>
+              </div>
+            </section>
+          </div>
+        </article>
+      </div>
+
+      <div class="my-5 flex items-center gap-3 text-stone-400 dark:text-slate-500" aria-hidden="true">
+        <div class="h-px flex-1 bg-stone-200 dark:bg-slate-700"></div>
+        <span class="font-mono text-xs font-bold uppercase tracking-wide">independent subscriptions</span>
+        <div class="h-px flex-1 bg-stone-200 dark:bg-slate-700"></div>
+      </div>
+
+      <div class="grid gap-4 lg:grid-cols-2">
+        <article
+          id="group-a-node"
+          class="rounded-xl border-2 border-green-300 bg-green-50/60 p-4 transition dark:border-green-800 dark:bg-green-950/20"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="font-mono text-[10px] font-bold uppercase tracking-wide text-green-700 dark:text-green-400">
+                ConsumerGroup
+              </p>
+              <h3 class="mt-1 font-bold">Group A · <code>fulfillment</code></h3>
+            </div>
+            <span id="group-a-status" class="rounded-full bg-stone-200 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-stone-600 dark:bg-slate-700 dark:text-slate-300">
+              waiting
+            </span>
+          </div>
+
+          <div class="mt-3 rounded-lg bg-white/80 p-3 text-xs dark:bg-slate-900">
+            <p><strong>Subscription:</strong> <code>(fulfillment, orders)</code></p>
+            <p class="mt-1 text-stone-500 dark:text-slate-400">Filter: <code>tag = order.created</code></p>
+          </div>
+
+          <div class="mt-3 grid grid-cols-3 gap-2 text-center font-mono text-xs">
+            <div class="rounded-lg bg-white p-2 dark:bg-slate-900"><span class="block text-stone-500 dark:text-slate-400">Q0 next</span><strong>2</strong></div>
+            <div class="rounded-lg bg-white p-2 dark:bg-slate-900"><span class="block text-stone-500 dark:text-slate-400">Q1 next</span><strong id="group-a-offset">2</strong></div>
+            <div class="rounded-lg bg-white p-2 dark:bg-slate-900"><span class="block text-stone-500 dark:text-slate-400">Q2 next</span><strong>1</strong></div>
+          </div>
+
+          <div class="mt-3 grid gap-2 sm:grid-cols-2">
+            <div id="consumer-a1" class="rounded-lg border border-green-200 bg-white p-3 text-sm transition dark:border-green-900 dark:bg-slate-900">
+              <strong>Consumer A1</strong>
+              <p class="mt-1 font-mono text-xs text-stone-500 dark:text-slate-400">assigned Q0</p>
+            </div>
+            <div id="consumer-a2" class="rounded-lg border border-green-200 bg-white p-3 text-sm transition dark:border-green-900 dark:bg-slate-900">
+              <strong>Consumer A2</strong>
+              <p class="mt-1 font-mono text-xs text-stone-500 dark:text-slate-400">assigned Q1, Q2</p>
+            </div>
+          </div>
+
+          <div id="group-a-delivery" class="mt-3 hidden rounded-lg border border-green-300 bg-white p-3 text-sm dark:border-green-800 dark:bg-slate-900">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <strong class="font-mono">M-104 · Q1:2</strong>
+              <span id="group-a-delivery-result" class="font-mono text-xs font-bold"></span>
+            </div>
+            <p id="group-a-delivery-detail" class="mt-1 text-xs text-stone-500 dark:text-slate-400"></p>
+          </div>
+        </article>
+
+        <article
+          id="group-b-node"
+          class="rounded-xl border-2 border-violet-300 bg-violet-50/60 p-4 transition dark:border-violet-800 dark:bg-violet-950/20"
+        >
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="font-mono text-[10px] font-bold uppercase tracking-wide text-violet-700 dark:text-violet-400">
+                ConsumerGroup
+              </p>
+              <h3 class="mt-1 font-bold">Group B · <code>analytics</code></h3>
+            </div>
+            <span id="group-b-status" class="rounded-full bg-stone-200 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-stone-600 dark:bg-slate-700 dark:text-slate-300">
+              waiting
+            </span>
+          </div>
+
+          <div class="mt-3 rounded-lg bg-white/80 p-3 text-xs dark:bg-slate-900">
+            <p><strong>Subscription:</strong> <code>(analytics, orders)</code></p>
+            <p class="mt-1 text-stone-500 dark:text-slate-400">Filter: <code>tag = order.created</code></p>
+          </div>
+
+          <div class="mt-3 grid grid-cols-3 gap-2 text-center font-mono text-xs">
+            <div class="rounded-lg bg-white p-2 dark:bg-slate-900"><span class="block text-stone-500 dark:text-slate-400">Q0 next</span><strong>2</strong></div>
+            <div class="rounded-lg bg-white p-2 dark:bg-slate-900"><span class="block text-stone-500 dark:text-slate-400">Q1 next</span><strong id="group-b-offset">2</strong></div>
+            <div class="rounded-lg bg-white p-2 dark:bg-slate-900"><span class="block text-stone-500 dark:text-slate-400">Q2 next</span><strong>1</strong></div>
+          </div>
+
+          <div class="mt-3 grid gap-2 sm:grid-cols-2">
+            <div id="consumer-b1" class="rounded-lg border border-violet-200 bg-white p-3 text-sm transition dark:border-violet-900 dark:bg-slate-900">
+              <strong>Consumer B1</strong>
+              <p class="mt-1 font-mono text-xs text-stone-500 dark:text-slate-400">assigned Q0, Q2</p>
+            </div>
+            <div id="consumer-b2" class="rounded-lg border border-violet-200 bg-white p-3 text-sm transition dark:border-violet-900 dark:bg-slate-900">
+              <strong>Consumer B2</strong>
+              <p class="mt-1 font-mono text-xs text-stone-500 dark:text-slate-400">assigned Q1</p>
+            </div>
+          </div>
+
+          <div id="group-b-delivery" class="mt-3 hidden rounded-lg border border-violet-300 bg-white p-3 text-sm dark:border-violet-800 dark:bg-slate-900">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <strong class="font-mono">M-104 · Q1:2</strong>
+              <span id="group-b-delivery-result" class="font-mono text-xs font-bold"></span>
+            </div>
+            <p id="group-b-delivery-detail" class="mt-1 text-xs text-stone-500 dark:text-slate-400"></p>
+          </div>
+        </article>
+      </div>
+
+      <div class="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Trace summary">
+        <div class="rounded-xl bg-stone-100 p-3 dark:bg-slate-900">
+          <p class="text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Broker storage</p>
+          <p id="summary-storage" class="mt-1 font-semibold">M-104 not stored</p>
+        </div>
+        <div class="rounded-xl bg-stone-100 p-3 dark:bg-slate-900">
+          <p class="text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Group A progress</p>
+          <p id="summary-a" class="mt-1 font-semibold">Q1 next offset: 2</p>
+        </div>
+        <div class="rounded-xl bg-stone-100 p-3 dark:bg-slate-900">
+          <p class="text-xs font-bold uppercase tracking-wide text-stone-500 dark:text-slate-400">Group B progress</p>
+          <p id="summary-b" class="mt-1 font-semibold">Q1 next offset: 2</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="mt-6 grid gap-6 lg:grid-cols-[1fr_1.15fr]">
+      <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+        <p class="font-mono text-sm font-semibold text-sky-700 dark:text-sky-400">Object relationships</p>
+        <h2 class="text-xl font-semibold">What owns what?</h2>
+        <dl class="mt-4 space-y-3">
+          {concepts.map((concept) => (
+            <div class="rounded-lg bg-stone-100 p-3 dark:bg-slate-900">
+              <dt class="font-mono text-sm font-bold">{concept.term}</dt>
+              <dd class="mt-1 text-sm text-stone-600 dark:text-slate-300">{concept.meaning}</dd>
+            </div>
+          ))}
+        </dl>
+        <p class="mt-4 text-sm text-stone-600 dark:text-slate-300">
+          A <code>Consumer</code> is a running member of a group. It inherits the group’s
+          consumption behavior and processes queues assigned to it.
+        </p>
+      </article>
+
+      <article class="rounded-2xl border border-stone-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-800 sm:p-6">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p class="font-mono text-sm font-semibold text-sky-700 dark:text-sky-400">Event log</p>
+            <h2 class="text-xl font-semibold">What happened?</h2>
+          </div>
+          <span class="font-mono text-xs text-stone-500 dark:text-slate-400">logical trace</span>
+        </div>
+        <ol id="trace-log" class="mt-4 space-y-2" aria-live="polite">
+          <li class="rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-900">
+            <strong>Ready.</strong> Publish M-104 to start the trace.
+          </li>
+        </ol>
+      </article>
+    </section>
+  </main>
+</BaseLayout>
+
+<script>
+  type TraceStep =
+    | "produced"
+    | "stored"
+    | "group-a-acked"
+    | "group-a-failed"
+    | "group-b-acked"
+    | "group-a-retried"
+    | "complete";
+
+  type LogTone = "normal" | "success" | "error";
+
+  function setupRocketMqTrace() {
+    const root = document.querySelector<HTMLElement>("#rocketmq-trace");
+    if (!root || root.dataset.ready) return;
+    root.dataset.ready = "true";
+
+    const find = <T extends Element>(selector: string) => root.querySelector<T>(selector)!;
+    const scenarioSelect = find<HTMLSelectElement>("#trace-scenario");
+    const publishButton = find<HTMLButtonElement>("#publish-message");
+    const nextButton = find<HTMLButtonElement>("#next-step");
+    const log = find<HTMLOListElement>("#trace-log");
+
+    const activeRingClasses = [
+      "ring-4",
+      "ring-sky-300",
+      "ring-offset-2",
+      "dark:ring-sky-700",
+      "dark:ring-offset-slate-900",
+    ];
+    const errorRingClasses = [
+      "ring-4",
+      "ring-red-300",
+      "ring-offset-2",
+      "dark:ring-red-800",
+      "dark:ring-offset-slate-900",
+    ];
+    const allRingClasses = [...activeRingClasses, ...errorRingClasses];
+
+    let sequence: TraceStep[] = [];
+    let stepIndex = -1;
+    let started = false;
+    let groupAAcknowledged = false;
+    let groupBAcknowledged = false;
+    let groupAFailed = false;
+
+    function animate(element: HTMLElement) {
+      element.animate(
+        [
+          { transform: "scale(0.985)", opacity: "0.65" },
+          { transform: "scale(1)", opacity: "1" },
+        ],
+        {
+          duration: matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 350,
+          easing: "ease-out",
+        },
+      );
+    }
+
+    function setActive(selector?: string, error = false) {
+      for (const element of root!.querySelectorAll<HTMLElement>(
+        "#producer-node, #topic-node, #queue-q1, #group-a-node, #group-b-node, #consumer-a2, #consumer-b2",
+      )) {
+        element.classList.remove(...allRingClasses);
+      }
+      if (!selector) return;
+      const element = find<HTMLElement>(selector);
+      element.classList.add(...(error ? errorRingClasses : activeRingClasses));
+      animate(element);
+    }
+
+    function setBadge(text: string, tone: LogTone = "normal") {
+      const badge = find<HTMLElement>("#phase-badge");
+      badge.textContent = text;
+      badge.className =
+        tone === "error"
+          ? "rounded-full bg-red-100 px-3 py-1 font-mono text-xs font-bold text-red-700 dark:bg-red-950 dark:text-red-300"
+          : tone === "success"
+            ? "rounded-full bg-green-100 px-3 py-1 font-mono text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-300"
+            : "rounded-full bg-sky-100 px-3 py-1 font-mono text-xs font-bold text-sky-700 dark:bg-sky-950 dark:text-sky-300";
+    }
+
+    function setPhase(title: string, explanation: string) {
+      find<HTMLElement>("#phase-title").textContent = title;
+      find<HTMLElement>("#phase-explanation").textContent = explanation;
+    }
+
+    function appendLog(title: string, detail: string, tone: LogTone = "normal") {
+      const item = document.createElement("li");
+      item.className =
+        tone === "error"
+          ? "rounded-lg border border-red-300 bg-red-50 p-3 text-sm text-red-900 dark:border-red-800 dark:bg-red-950/30 dark:text-red-200"
+          : tone === "success"
+            ? "rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-900 dark:border-green-800 dark:bg-green-950/30 dark:text-green-200"
+            : "rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-900";
+      const heading = document.createElement("strong");
+      heading.textContent = `${title} `;
+      const text = document.createElement("span");
+      text.textContent = detail;
+      item.append(heading, text);
+      log.append(item);
+      animate(item);
+    }
+
+    function setGroupStatus(group: "a" | "b", status: string, tone: LogTone = "normal") {
+      const badge = find<HTMLElement>(`#group-${group}-status`);
+      badge.textContent = status;
+      badge.className =
+        tone === "error"
+          ? "rounded-full bg-red-100 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-red-700 dark:bg-red-950 dark:text-red-300"
+          : tone === "success"
+            ? "rounded-full bg-green-100 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-green-700 dark:bg-green-950 dark:text-green-300"
+            : "rounded-full bg-stone-200 px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wide text-stone-600 dark:bg-slate-700 dark:text-slate-300";
+    }
+
+    function setDelivery(
+      group: "a" | "b",
+      result: string,
+      detail: string,
+      tone: LogTone,
+    ) {
+      const container = find<HTMLElement>(`#group-${group}-delivery`);
+      container.classList.remove("hidden");
+      const resultElement = find<HTMLElement>(`#group-${group}-delivery-result`);
+      resultElement.textContent = result;
+      resultElement.className =
+        tone === "error"
+          ? "font-mono text-xs font-bold text-red-700 dark:text-red-300"
+          : "font-mono text-xs font-bold text-green-700 dark:text-green-300";
+      find<HTMLElement>(`#group-${group}-delivery-detail`).textContent = detail;
+      animate(container);
+    }
+
+    function updateSummary() {
+      find<HTMLElement>("#summary-storage").textContent = started && stepIndex >= 1
+        ? "One copy at Q1 offset 2"
+        : "M-104 not stored";
+      find<HTMLElement>("#summary-a").textContent = groupAAcknowledged
+        ? "Consumed · Q1 next offset: 3"
+        : groupAFailed
+          ? "Retry pending · Q1 remains at 2"
+          : "Q1 next offset: 2";
+      find<HTMLElement>("#summary-b").textContent = groupBAcknowledged
+        ? "Consumed · Q1 next offset: 3"
+        : "Q1 next offset: 2";
+    }
+
+    function renderRail() {
+      const rail = find<HTMLElement>("#step-rail");
+      rail.replaceChildren();
+      const labels: Record<TraceStep, string> = {
+        produced: "Produce",
+        stored: "Store",
+        "group-a-acked": "Group A",
+        "group-a-failed": "A fails",
+        "group-b-acked": "Group B",
+        "group-a-retried": "A retries",
+        complete: "Complete",
+      };
+
+      for (const [index, step] of sequence.entries()) {
+        const item = document.createElement("span");
+        item.textContent = `${index + 1}. ${labels[step]}`;
+        item.className =
+          index < stepIndex
+            ? "rounded-full bg-green-100 px-3 py-1 font-mono text-xs font-bold text-green-700 dark:bg-green-950 dark:text-green-300"
+            : index === stepIndex
+              ? "rounded-full bg-sky-700 px-3 py-1 font-mono text-xs font-bold text-white dark:bg-sky-600"
+              : "rounded-full bg-stone-100 px-3 py-1 font-mono text-xs text-stone-500 dark:bg-slate-900 dark:text-slate-400";
+        rail.append(item);
+      }
+    }
+
+    function applyStep(step: TraceStep) {
+      renderRail();
+
+      switch (step) {
+        case "produced": {
+          find<HTMLElement>("#producer-message").classList.remove("hidden");
+          setActive("#producer-node");
+          setBadge("PRODUCED");
+          setPhase(
+            "The producer created Message M-104",
+            "The message names Topic orders and carries its producer-generated message ID. It has not been persisted yet.",
+          );
+          appendLog("Produced.", "The producer created immutable Message M-104 for Topic orders.");
+          break;
+        }
+        case "stored": {
+          const message = find<HTMLElement>("#queue-message");
+          message.textContent = "2 · M-104";
+          message.className =
+            "rounded border border-sky-400 bg-sky-100 px-2 py-1 font-mono text-xs font-bold text-sky-800 dark:border-sky-700 dark:bg-sky-950 dark:text-sky-300";
+          find<HTMLElement>("#stored-copy-count").textContent = "1";
+          setActive("#queue-q1");
+          setBadge("STORED");
+          setPhase(
+            "M-104 was stored in MessageQueue Q1",
+            "Routing selected Q1 and the broker assigned offset 2. Topic orders is the logical container; Q1 is the ordered storage lane.",
+          );
+          appendLog("Stored.", "The broker created one logical entry for M-104 at Q1 offset 2.");
+          break;
+        }
+        case "group-a-acked": {
+          groupAAcknowledged = true;
+          find<HTMLElement>("#group-a-offset").textContent = "3";
+          setGroupStatus("a", "acknowledged", "success");
+          setDelivery("a", "ACKNOWLEDGED", "Consumer A2 processed the queue entry.", "success");
+          setActive("#consumer-a2");
+          setBadge("GROUP A ACK", "success");
+          setPhase(
+            "Group A acknowledged M-104",
+            "Consumer A2 handled Q1 for the fulfillment group. Only Group A’s Q1 progress advanced from 2 to 3.",
+          );
+          appendLog("Group A consumed.", "Consumer A2 acknowledged M-104; Group A advanced Q1 to offset 3.", "success");
+          break;
+        }
+        case "group-a-failed": {
+          groupAFailed = true;
+          setGroupStatus("a", "retry pending", "error");
+          setDelivery("a", "FAILED", "Attempt 1 failed; retryTimes is now 1. Q1 progress stays at 2.", "error");
+          setActive("#consumer-a2", true);
+          setBadge("GROUP A FAILED", "error");
+          setPhase(
+            "Group A failed its first delivery attempt",
+            "The group did not acknowledge M-104, so its Q1 progress remains at offset 2. Group B is independent and can still consume.",
+          );
+          appendLog("Group A failed.", "No acknowledgement was recorded, so Group A remains at Q1 offset 2.", "error");
+          break;
+        }
+        case "group-b-acked": {
+          groupBAcknowledged = true;
+          find<HTMLElement>("#group-b-offset").textContent = "3";
+          setGroupStatus("b", "acknowledged", "success");
+          setDelivery("b", "ACKNOWLEDGED", "Consumer B2 processed the same stored queue entry.", "success");
+          setActive("#consumer-b2");
+          setBadge("GROUP B ACK", "success");
+          setPhase(
+            "Group B independently acknowledged M-104",
+            groupAFailed
+              ? "Group B advanced to Q1 offset 3 while Group A remained at offset 2 awaiting retry."
+              : "Group B advanced its own Q1 progress from 2 to 3; Group A’s progress was not reused.",
+          );
+          appendLog("Group B consumed.", "Consumer B2 acknowledged M-104 and independently advanced Q1 to offset 3.", "success");
+          break;
+        }
+        case "group-a-retried": {
+          groupAAcknowledged = true;
+          groupAFailed = false;
+          find<HTMLElement>("#group-a-offset").textContent = "3";
+          setGroupStatus("a", "retry succeeded", "success");
+          setDelivery("a", "ACKNOWLEDGED", "Retry 1 succeeded on Consumer A2; Q1 can advance.", "success");
+          setActive("#consumer-a2");
+          setBadge("GROUP A RETRY", "success");
+          setPhase(
+            "Group A’s retry succeeded",
+            "The same message was delivered again because the earlier attempt was not acknowledged. Group A can now advance to offset 3.",
+          );
+          appendLog("Group A retry succeeded.", "M-104 was redelivered and acknowledged; Group A advanced Q1 to offset 3.", "success");
+          break;
+        }
+        case "complete": {
+          setActive();
+          setBadge("COMPLETE", "success");
+          setPhase(
+            "Trace complete: one queue entry, two independent group acknowledgements",
+            "Both groups reached Q1 next offset 3. Within each group only its Q1-assigned consumer handled M-104.",
+          );
+          appendLog("Complete.", "Both groups independently acknowledged the same logical Q1 entry.", "success");
+          break;
+        }
+      }
+
+      updateSummary();
+      nextButton.disabled = stepIndex >= sequence.length - 1;
+      nextButton.textContent = stepIndex >= sequence.length - 1 ? "Trace complete" : "Next step";
+    }
+
+    function reset() {
+      sequence = [];
+      stepIndex = -1;
+      started = false;
+      groupAAcknowledged = false;
+      groupBAcknowledged = false;
+      groupAFailed = false;
+
+      scenarioSelect.disabled = false;
+      publishButton.disabled = false;
+      nextButton.disabled = true;
+      nextButton.textContent = "Next step";
+      find<HTMLElement>("#producer-message").classList.add("hidden");
+      const message = find<HTMLElement>("#queue-message");
+      message.textContent = "2 · empty";
+      message.className =
+        "rounded border border-dashed border-stone-300 bg-stone-50 px-2 py-1 font-mono text-xs text-stone-400 dark:border-slate-600 dark:bg-slate-800 dark:text-slate-500";
+      find<HTMLElement>("#stored-copy-count").textContent = "0";
+      find<HTMLElement>("#group-a-offset").textContent = "2";
+      find<HTMLElement>("#group-b-offset").textContent = "2";
+      find<HTMLElement>("#group-a-delivery").classList.add("hidden");
+      find<HTMLElement>("#group-b-delivery").classList.add("hidden");
+      setGroupStatus("a", "waiting");
+      setGroupStatus("b", "waiting");
+      setActive();
+      setBadge("READY");
+      setPhase(
+        "Ready to publish Message M-104",
+        "The broker does not contain this message yet, and neither consumer group has seen it.",
+      );
+      find<HTMLElement>("#phase-badge").className =
+        "rounded-full bg-stone-200 px-3 py-1 font-mono text-xs font-bold text-stone-700 dark:bg-slate-700 dark:text-slate-200";
+      find<HTMLElement>("#step-rail").replaceChildren();
+      log.replaceChildren();
+      const readyItem = document.createElement("li");
+      readyItem.className =
+        "rounded-lg border border-stone-200 bg-stone-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-900";
+      const strong = document.createElement("strong");
+      strong.textContent = "Ready. ";
+      readyItem.append(strong, "Publish M-104 to start the trace.");
+      log.append(readyItem);
+      updateSummary();
+    }
+
+    publishButton.addEventListener("click", () => {
+      const failurePath = scenarioSelect.value === "failure";
+      sequence = failurePath
+        ? ["produced", "stored", "group-a-failed", "group-b-acked", "group-a-retried", "complete"]
+        : ["produced", "stored", "group-a-acked", "group-b-acked", "complete"];
+      started = true;
+      stepIndex = 0;
+      scenarioSelect.disabled = true;
+      publishButton.disabled = true;
+      nextButton.disabled = false;
+      log.replaceChildren();
+      applyStep(sequence[stepIndex]);
+    });
+
+    nextButton.addEventListener("click", () => {
+      if (!started || stepIndex >= sequence.length - 1) return;
+      stepIndex += 1;
+      applyStep(sequence[stepIndex]);
+    });
+
+    find<HTMLButtonElement>("#reset-trace").addEventListener("click", reset);
+    reset();
+  }
+
+  document.addEventListener("astro:page-load", setupRocketMqTrace);
+</script>
