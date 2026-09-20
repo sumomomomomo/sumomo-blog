@@ -282,9 +282,10 @@ export type JobStatus = "QUEUED" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
 
 export async function getIngestionJob(
   jobId: string,
+  signal?: AbortSignal,
 ): Promise<{ ok: true; job: IngestionJob } | { ok: false; error: ApiError }> {
   try {
-    const response = await request(`/ingestion-jobs/${encodeURIComponent(jobId)}`);
+    const response = await request(`/ingestion-jobs/${encodeURIComponent(jobId)}`, { signal });
     if (!response.ok) {
       return { ok: false, error: await parseErrorResponse(response) };
     }
@@ -354,19 +355,17 @@ export function uploadZip(options: UploadOptions): Promise<UploadResult> {
         });
         return;
       }
+      // responseType is "json", so read xhr.response (responseText would throw
+      // InvalidStateError). It is null when the body is not valid JSON.
       let code = "unknown_error";
       let title = "Upload failed";
       let detail = "";
-      try {
-        const parsed: unknown = JSON.parse(xhr.responseText);
-        if (typeof parsed === "object" && parsed !== null) {
-          const record = parsed as Record<string, unknown>;
-          if (typeof record.code === "string") code = record.code;
-          if (typeof record.title === "string") title = record.title;
-          if (typeof record.detail === "string") detail = record.detail;
-        }
-      } catch {
-        // Non-JSON error body.
+      const parsed: unknown = xhr.response;
+      if (typeof parsed === "object" && parsed !== null) {
+        const record = parsed as Record<string, unknown>;
+        if (typeof record.code === "string") code = record.code;
+        if (typeof record.title === "string") title = record.title;
+        if (typeof record.detail === "string") detail = record.detail;
       }
       reject({
         status: xhr.status,

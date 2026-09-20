@@ -82,15 +82,25 @@ export default function PosDocumentApp() {
   }, [clearData]);
 
   /** Load record + documents when an ingestion job completes. */
-  const loadRecordWithDocuments = useCallback(async (posRecordId: string) => {
-    const recordOutcome = await getRecord(posRecordId);
-    if (!recordOutcome.ok) return;
-    const docsOutcome = await getRecordDocuments(posRecordId);
-    setSelectedRecord({
-      ...recordOutcome.record,
-      documents: docsOutcome.ok ? docsOutcome.documents : [],
-    });
-  }, []);
+  const loadRecordWithDocuments = useCallback(
+    async (posRecordId: string) => {
+      const recordOutcome = await getRecord(posRecordId);
+      if (!recordOutcome.ok) {
+        if (recordOutcome.error.status === 401) handleUnauthorized();
+        return;
+      }
+      const docsOutcome = await getRecordDocuments(posRecordId);
+      if (!docsOutcome.ok) {
+        if (docsOutcome.error.status === 401) handleUnauthorized();
+        return;
+      }
+      setSelectedRecord({
+        ...recordOutcome.record,
+        documents: docsOutcome.documents,
+      });
+    },
+    [handleUnauthorized],
+  );
 
   if (authState === "LOADING") {
     return (

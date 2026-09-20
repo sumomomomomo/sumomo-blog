@@ -188,7 +188,7 @@ describe("upload and polling", () => {
     await userEvent.click(screen.getByRole("button", { name: "Upload" }));
 
     await waitFor(() => expect(screen.getByText(/Processing completed./i)).toBeInTheDocument());
-    expect(mockGetJob).toHaveBeenCalledWith("j-1");
+    expect(mockGetJob).toHaveBeenCalledWith("j-1", expect.any(AbortSignal));
     expect(mockGetRecord).toHaveBeenCalledWith("r-1");
     expect(mockGetDocuments).toHaveBeenCalledWith("r-1");
   });
@@ -304,6 +304,203 @@ describe("search and detail", () => {
     await screen.findByText(/Search POS records/i);
     await userEvent.click(screen.getByRole("button", { name: "Search" }));
     expect(await screen.findByRole("link", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Test User/)).not.toBeInTheDocument();
+  });
+});
+
+describe("uploadZip over real XHR (mocked transport)", () => {
+  class FakeXHR {
+    static instances: FakeXHR[] = [];
+    static onload = () => {};
+    open = vi.fn();
+    send = vi.fn();
+    setRequestHeader = vi.fn();
+    abort = vi.fn();
+    withCredentials = false;
+    responseType = "";
+    response: unknown = null;
+    upload = { onprogress: null };
+    onload: (() => void) | null = null;
+    onerror: (() => void) | null = null;
+    onabort: (() => void) | null = null;
+    constructor() {
+      FakeXHR.instances.push(this);
+    }
+  }
+  beforeEach(() => {
+    FakeXHR.instances = [];
+    document.cookie = "XSRF-TOKEN=token-abc; Path=/";
+    window.XMLHttpRequest = FakeXHR as unknown as typeof XMLHttpRequest;
+  });
+  afterEach(() => {
+    document.cookie = "XSRF-TOKEN=; Max-Age=0";
+  });
+
+  it("sends multipart FormData, withCredentials, and the CSRF header", async () => {
+    const realApi = await vi.importActual<typeof import("./api")>("./api");
+    const controller = new AbortController();
+    const promise = realApi.uploadZip({
+      file: new File(["PK"], "archive.zip", { type: "application/zip" }),
+      policyNumber: "P123",
+      signal: controller.signal,
+    });
+    const xhr = FakeXHR.instances[0];
+    expect(xhr.open).toHaveBeenCalledWith("POST", "/api/v1/pos-records");
+    expect(xhr.withCredentials).toBe(true);
+    expect(xhr.setRequestHeader).toHaveBeenCalledWith("X-XSRF-TOKEN", "token-abc");
+    const formData = xhr.send.mock.calls[0][0] as FormData;
+    expect(formData).toBeInstanceOf(FormData);
+    expect(formData.get("file")).toBeInstanceOf(File);
+    expect(formData.get("policyNumber")).toBe("P123");
+    // Resolve the request as a 202.
+    xhr.response = { posRecordId: "r-9", jobId: "j-9" };
+    Object.defineProperty(xhr, "status", { value: 202 });
+    xhr.onload?.();
+    await expect(promise).resolves.toEqual({ posRecordId: "r-9", jobId: "j-9" });
+  });
+
+  it("parses RFC 7807 error bodies from xhr.response (not responseText)", async () => {
+    const realApi = await vi.importActual<typeof import("./api")>("./api");
+    const promise = realApi.uploadZip({
+      file: new File(["PK"], "archive.zip", { type: "application/zip" }),
+      signal: new AbortController().signal,
+    });
+    const xhr = FakeXHR.instances[0];
+    xhr.response = { title: "Conflict", detail: "DUPLICATE_POLICY_NUMBER at 192.168.1.35" };
+    Object.defineProperty(xhr, "status", { value: 409 });
+    xhr.onload?.();
+    await expect(promise).rejects.toMatchObject({
+      status: 409,
+      title: "Conflict",
+      // IP address is stripped from the detail.
+      detail: "DUPLICATE_POLICY_NUMBER at",
+    });
+  });
+});
+
+describe("polling lifecycle", () => {
+  it("stops polling on logout and unmount", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+      mockUpload.mockResolvedValue({ posRecordId: "r-1", jobId: "j-1" });
+      mockGetJob.mockResolvedValue({
+        ok: true,
+        job: {
+          id: "j-1",
+          status: "IN_PROGRESS",
+          attemptCount: 1,
+          errorCode: null,
+          errorMessage: null,
+        },
+      });
+      mockLogout.mockResolvedValue(undefined);
+      const { unmount } = render(<PosDocumentApp />);
+      await screen.findByText(/Upload POS archive/i);
+      const fileInput = screen.getByLabelText(/zip archive/i) as HTMLInputElement;
+      await userEvent.upload(
+        fileInput,
+        new File(["PK"], "archive.zip", { type: "application/zip" }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Upload" }));
+      await waitFor(() => expect(mockGetJob).toHaveBeenCalledTimes(1));
+
+      await userEvent.click(screen.getByRole("button", { name: /log out/i }));
+      const callsAfterLogout = mockGetJob.mock.calls.length;
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(mockGetJob.mock.calls.length).toBe(callsAfterLogout);
+
+      // Unmount also stops any future polling.
+      unmount();
+      await vi.advanceTimersByTimeAsync(10000);
+      expect(mockGetJob.mock.calls.length).toBe(callsAfterLogout);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("times out after 5 minutes and offers a manual Refresh", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+      mockUpload.mockResolvedValue({ posRecordId: "r-1", jobId: "j-1" });
+      mockGetJob.mockResolvedValue({
+        ok: true,
+        job: {
+          id: "j-1",
+          status: "IN_PROGRESS",
+          attemptCount: 5,
+          errorCode: null,
+          errorMessage: null,
+        },
+      });
+      render(<PosDocumentApp />);
+      await screen.findByText(/Upload POS archive/i);
+      const fileInput = screen.getByLabelText(/zip archive/i) as HTMLInputElement;
+      await userEvent.upload(
+        fileInput,
+        new File(["PK"], "archive.zip", { type: "application/zip" }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Upload" }));
+      await vi.advanceTimersByTimeAsync(6 * 60 * 1000);
+      expect(await screen.findByText(/polling timed out/i)).toBeInTheDocument();
+
+      mockGetJob.mockResolvedValue({
+        ok: true,
+        job: {
+          id: "j-1",
+          status: "COMPLETED",
+          attemptCount: 6,
+          errorCode: null,
+          errorMessage: null,
+        },
+      });
+      await userEvent.click(screen.getByRole("button", { name: "Refresh" }));
+      await waitFor(() => expect(screen.getByText(/Processing completed./i)).toBeInTheDocument());
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("stops polling and signs out when the job endpoint returns 401", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockUpload.mockResolvedValue({ posRecordId: "r-1", jobId: "j-1" });
+    mockGetJob.mockResolvedValue({
+      ok: false,
+      error: { status: 401, code: "unauthorized", title: "Unauthorized", detail: "" },
+    });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Upload POS archive/i);
+    const fileInput = screen.getByLabelText(/zip archive/i) as HTMLInputElement;
+    await userEvent.upload(fileInput, new File(["PK"], "archive.zip", { type: "application/zip" }));
+    await userEvent.click(screen.getByRole("button", { name: "Upload" }));
+    expect(await screen.findByRole("link", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(mockGetJob).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("401 clears previously visible PII", () => {
+  it("removes visible record data and returns to signed-out", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: signedInUser });
+    mockGetRecord.mockResolvedValue({ ok: true, record: recordDetail });
+    mockGetDocuments.mockResolvedValue({ ok: true, documents: [] });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+
+    // Make record PII visible.
+    mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
+    expect((await screen.findAllByText(/Jane Sample/)).length).toBeGreaterThan(0);
+
+    // A later request returns 401.
+    mockSearch.mockResolvedValue({
+      ok: false,
+      error: { status: 401, code: "unauthorized", title: "Unauthorized", detail: "" },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByRole("link", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(screen.queryByText(/Jane Sample/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Test User/)).not.toBeInTheDocument();
   });
 });

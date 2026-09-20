@@ -15,7 +15,14 @@ NET=nginx-gw-test-$$
 STUB_IMAGE=python:3.12-alpine
 NGINX_IMAGE=nginxinc/nginx-unprivileged:alpine
 WORK=$(mktemp -d)
-trap 'docker rm -f gw-nginx-$$ gw-stub-$$ >/dev/null 2>&1; docker network rm $NET >/dev/null 2>&1; rm -rf "$WORK"' EXIT
+APP_DIST="${1:-app/dist}"
+trap 'docker rm -f gw-nginx-$$ gw-stub-$$ gw-app-$$ >/dev/null 2>&1; docker network rm $NET >/dev/null 2>&1; rm -rf "$WORK"' EXIT
+
+if [ ! -f "$APP_DIST/pos/index.html" ]; then
+	echo "==> Building Astro app (no built dist found at $APP_DIST)"
+	(cd app && npm run build >/dev/null)
+fi
+[ -f "$APP_DIST/pos/index.html" ] || { echo "FAIL: built /pos/ page not found"; exit 1; }
 
 echo "==> Preparing test configuration (LAN IPs substituted with stub hostname)"
 sed -e 's/192\.168\.1\.35/stub/' -e 's/192\.168\.1\.89/stub/' \
@@ -93,8 +100,13 @@ EOF
 echo "==> Starting stub backend and nginx containers"
 docker network create "$NET" >/dev/null
 docker run -d --name gw-stub-$$ --network "$NET" \
-	--network-alias stub --network-alias app \
+	--network-alias stub \
 	-v "$WORK/stub.py:/stub.py" "$STUB_IMAGE" python /stub.py >/dev/null
+
+echo "==> Serving the real built Astro output as the 'app' upstream"
+docker run -d --name gw-app-$$ --network "$NET" --network-alias app \
+	-v "$(cd "$APP_DIST" && pwd)/:/usr/share/nginx/html:ro" \
+	nginx:alpine >/dev/null
 # Wait until the stub answers before validating/routing.
 for _ in $(seq 1 30); do
 	docker exec gw-stub-$$ python -c "import socket;s=socket.create_connection(('127.0.0.1',18080),1)" >/dev/null 2>&1 && break
@@ -114,9 +126,11 @@ docker exec gw-nginx-$$ nginx -t 2>&1 | grep -q "syntax is ok" || fail "nginx -t
 docker exec gw-nginx-$$ nginx -t 2>&1 | grep -q "test is successful" || fail "nginx -t"
 echo "    OK"
 
-echo "==> 2. / serves the Astro app (stubbed app upstream)"
-result=$(curl -sS --retry 10 --retry-connrefused --retry-delay 1 "$BASE/" 2>&1)
-echo "$result" | grep -q "STUB GET /" || fail "static route not proxied to app upstream: $result"
+echo "==> 2. / and /pos/ serve the built Astro app (real dist, not a stub)"
+result=$(curl -sS --retry 15 --retry-connrefused --retry-delay 1 "$BASE/" 2>&1)
+echo "$result" | grep -q "<!DOCTYPE html>\|<!doctype html>" || fail "static route not proxied to app upstream: $result"
+pos_result=$(curl -sS "$BASE/pos/")
+echo "$pos_result" | grep -qi "POS document portal" || fail "built /pos/ page not served: $pos_result"
 echo "    OK"
 
 echo "==> 3. /api/v1/auth/me reaches the stub with path unchanged"
@@ -165,15 +179,11 @@ grep -q "192.168.1.35" "$WORK/default.conf" && fail "LAN address leaked into tes
 grep -q "192.168.1.34" "$WORK/default.conf" && fail "OCR address leaked into test config"
 echo "    OK"
 
-if [ -d app/dist ]; then
-	echo "==> 9. Built frontend bundle check"
-	if grep -rqE "192\.168\.1\.(34|35)" app/dist/pos 2>/dev/null; then
-		fail "built frontend contains a LAN address"
-	fi
-	echo "    OK (no LAN address in app/dist/pos)"
-else
-	echo "==> 9. Skipping built bundle check (app/dist not present; run 'npm run build')"
+echo "==> 9. Built frontend bundle check"
+if grep -rqE "192\.168\.1\.(34|35)" "$APP_DIST/pos" 2>/dev/null; then
+	fail "built frontend contains a LAN address"
 fi
+echo "    OK (no LAN address in $APP_DIST/pos)"
 
 echo
 echo "All Nginx gateway tests passed."

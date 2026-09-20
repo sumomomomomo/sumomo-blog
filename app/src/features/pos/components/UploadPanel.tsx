@@ -56,6 +56,8 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
     clearPolling();
     abortRef.current?.abort();
     abortRef.current = null;
+    pollControllerRef.current?.abort();
+    pollControllerRef.current = null;
   };
 
   // Stop polling and any in-flight upload when the panel unmounts (e.g. logout or 401).
@@ -70,16 +72,22 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
     return null;
   };
 
-  const pollJob = (jobId: string, posRecordId: string, controller: AbortController): void => {
+  const pollControllerRef = useRef<AbortController | null>(null);
+  const jobIdRef = useRef<string | null>(null);
+  const recordIdRef = useRef<string | null>(null);
+
+  const startPolling = (jobId: string, posRecordId: string): void => {
+    const controller = new AbortController();
+    pollControllerRef.current = controller;
     const startedAt = Date.now();
     let inFlight = false;
 
-    const tick = async () => {
+    const tick = async (): Promise<void> => {
       if (controller.signal.aborted || inFlight) return;
       inFlight = true;
       try {
         const { getIngestionJob } = await import("../api");
-        const outcome = await getIngestionJob(jobId);
+        const outcome = await getIngestionJob(jobId, controller.signal);
         if (controller.signal.aborted) return;
         if (outcome.ok) {
           onJobUpdate(outcome.job);
@@ -102,6 +110,11 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
             setState("DONE");
             return;
           }
+        } else if (outcome.error.status === 401) {
+          // Session expired: stop polling and clear all visible data.
+          stop();
+          onUnauthorized();
+          return;
         }
         if (Date.now() - startedAt > 5 * 60 * 1000) {
           setMessage("Polling timed out. Use Refresh to check the job again.");
@@ -120,6 +133,24 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
     };
 
     void tick();
+  };
+
+  const pollJob = (jobId: string, posRecordId: string): void => {
+    jobIdRef.current = jobId;
+    recordIdRef.current = posRecordId;
+    startPolling(jobId, posRecordId);
+  };
+
+  /** Manual Refresh after a polling timeout. */
+  const handleRefresh = () => {
+    if (jobIdRef.current && recordIdRef.current) {
+      setMessage(null);
+      setIsError(false);
+      setStatus("");
+      setAttemptCount(null);
+      setState("PROCESSING");
+      startPolling(jobIdRef.current, recordIdRef.current);
+    }
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -158,7 +189,7 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
       setState("PROCESSING");
       setStatus("UPLOADED");
       if (fileInputRef.current) fileInputRef.current.value = "";
-      pollJob(result.jobId, result.posRecordId, controller);
+      pollJob(result.jobId, result.posRecordId);
     } catch (error) {
       if (controller.signal.aborted) return;
       if (typeof error === "object" && error !== null && (error as ApiError).status === 401) {
@@ -231,7 +262,18 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
           {state === "DONE" ? (
             <button
               type="button"
+              onClick={handleRefresh}
+              className="rounded border border-stone-400 px-4 py-2 text-sm hover:bg-stone-100 dark:hover:bg-slate-700"
+            >
+              Refresh
+            </button>
+          ) : null}
+          {state === "DONE" ? (
+            <button
+              type="button"
               onClick={() => {
+                jobIdRef.current = null;
+                recordIdRef.current = null;
                 setState("IDLE");
                 setMessage(null);
                 setStatus("");
