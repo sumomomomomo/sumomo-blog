@@ -15,7 +15,7 @@ A modern blog created with **Astro** (Static Site Generation), **React**, and **
 ### Technology Stack
 
 * **Frontend:** Astro (Static Site Generation)
-* **Client-side:** React (TTS component with `client:load`)
+* **Client-side:** React (TTS component and POS document portal with `client:load`)
 * **Styling:** Tailwind CSS v4 (inline utility classes with dark mode support)
 * **Ingress:** Cloudflare Tunnel (`cloudflared`)
 * **Proxy:** Nginx (Alpine Unprivileged) - Handles Layer 7 (Web) & Layer 4 (SSH)
@@ -102,7 +102,12 @@ We use a custom `nginx.conf` to multiplex traffic based on the incoming port fro
 | Traffic Type | Port | Route | Config File |
 | --- | --- | --- | --- |
 | **HTTP (Web)** | `80` | Proxies to Static App (`app:80`) | `nginx/default.conf` |
+| **HTTP (API)** | `80` | Forwards `/api/v1/*` to the POS Spring backend (`192.168.1.35:18080`), path preserved | `nginx/default.conf` |
 | **SSH (Stream)** | `2222` | Forwards to `seiun-sky` (`192.168.1.11:22`) | `nginx/nginx.conf` |
+
+> ⚠️ **Warning:** `192.168.1.34:8080` is the OCR endpoint. It must never be exposed
+> through Nginx, Cloudflare, or any public route — only the Spring backend may reach it.
+> Public API access goes through `https://sumomo.horse/api/v1/` only.
 
 **Note on Permissions:**
 We use the `nginxinc/nginx-unprivileged:alpine` image. The `nginx.conf` is strictly configured to write PIDs to `/tmp/nginx.pid` to avoid root permission errors.
@@ -120,6 +125,40 @@ Deployments utilize a **Hard Reset Strategy** to prevent configuration drift.
 3. **Rebuild:** `docker compose up -d --build app nginx`.
 
 The deployment script **explicitly excludes** the `tunnel` container from the rebuild command. Restarting the tunnel would sever the active SSH connection, causing the pipeline to fail mid-deployment.
+
+---
+
+## 🔐 POS Document Portal (`/pos/`)
+
+The POS portal is served at `https://sumomo.horse/pos/` (not linked in the public
+navigation). It signs in via Google OAuth2, uploads ZIP archives, monitors ingestion
+jobs, searches records, and views record/document metadata.
+
+- **Frontend route:** `/pos/` (static Astro page mounting a React app with `client:load`)
+- **API path:** same-origin `/api/v1/...` (the browser never talks to LAN addresses directly)
+- **Nginx upstream:** `http://192.168.1.35:18080` (`/api/v1/` prefix is preserved)
+- **Google callback URL (production):** `https://sumomo.horse/api/v1/login/oauth2/code/google`
+- **Post-login redirect:** `/pos/`
+- Upload limit: 10 MiB ZIP (`client_max_body_size 11m` in Nginx)
+
+### Frontend commands
+
+```bash
+cd app
+npm ci
+npm run dev        # dev server (POS portal at /pos/)
+npm test -- --run  # Vitest + Testing Library (mocked backend)
+npm run typecheck  # astro check
+npm run lint       # biome check
+npm run build      # static build to dist/
+```
+
+### Nginx gateway verification
+
+```bash
+./nginx/test-gateway.sh   # spins up a stub backend; never touches the LAN
+docker compose config --quiet
+```
 
 ---
 
