@@ -272,13 +272,13 @@ export async function getRecordDocuments(
 
 export interface IngestionJob {
   id: string;
-  status: string;
+  status: JobStatus;
   attemptCount: number;
   errorCode: string | null;
   errorMessage: string | null;
 }
 
-export type JobStatus = "QUEUED" | "IN_PROGRESS" | "COMPLETED" | "FAILED";
+export type JobStatus = "QUEUED" | "RUNNING" | "RETRY_SCHEDULED" | "COMPLETED" | "FAILED";
 
 export async function getIngestionJob(
   jobId: string,
@@ -295,7 +295,7 @@ export async function getIngestionJob(
       ok: true,
       job: {
         id: typeof record.id === "string" ? record.id : jobId,
-        status: typeof record.status === "string" ? record.status : "",
+        status: (typeof record.status === "string" ? record.status : "QUEUED") as JobStatus,
         attemptCount: typeof record.attemptCount === "number" ? record.attemptCount : 0,
         errorCode: typeof record.errorCode === "string" ? record.errorCode : null,
         errorMessage: typeof record.errorMessage === "string" ? record.errorMessage : null,

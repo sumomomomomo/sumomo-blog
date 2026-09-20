@@ -42,6 +42,7 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
   const [message, setMessage] = useState<string | null>(null);
   const [isError, setIsError] = useState(false);
   const [status, setStatus] = useState<string>("");
+  const [timedOut, setTimedOut] = useState(false);
   const [attemptCount, setAttemptCount] = useState<number | null>(null);
   const abortRef = useRef<AbortController | null>(null);
   const pollTimersRef = useRef<ReturnType<typeof setTimeout>[]>([]);
@@ -96,6 +97,7 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
           if (outcome.job.status === "COMPLETED") {
             setMessage("Processing completed.");
             setIsError(false);
+            setTimedOut(false);
             setState("DONE");
             onCompleted(posRecordId);
             return;
@@ -107,6 +109,7 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
               }`,
             );
             setIsError(true);
+            setTimedOut(false);
             setState("DONE");
             return;
           }
@@ -119,6 +122,7 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
         if (Date.now() - startedAt > 5 * 60 * 1000) {
           setMessage("Polling timed out. Use Refresh to check the job again.");
           setIsError(true);
+          setTimedOut(true);
           setState("DONE");
           return;
         }
@@ -144,6 +148,7 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
   /** Manual Refresh after a polling timeout. */
   const handleRefresh = () => {
     if (jobIdRef.current && recordIdRef.current) {
+      setTimedOut(false);
       setMessage(null);
       setIsError(false);
       setStatus("");
@@ -259,7 +264,7 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
               Cancel
             </button>
           ) : null}
-          {state === "DONE" ? (
+          {state === "DONE" && timedOut ? (
             <button
               type="button"
               onClick={handleRefresh}
@@ -278,6 +283,7 @@ export default function UploadPanel({ onUnauthorized, onJobUpdate, onCompleted }
                 setMessage(null);
                 setStatus("");
                 setAttemptCount(null);
+                setTimedOut(false);
               }}
               className="rounded border border-stone-400 px-4 py-2 text-sm hover:bg-stone-100 dark:hover:bg-slate-700"
             >

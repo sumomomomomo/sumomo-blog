@@ -379,23 +379,17 @@ describe("uploadZip over real XHR (mocked transport)", () => {
 });
 
 describe("polling lifecycle", () => {
-  it("stops polling on logout and unmount", async () => {
+  it("stops polling on logout", async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     try {
       mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
       mockUpload.mockResolvedValue({ posRecordId: "r-1", jobId: "j-1" });
       mockGetJob.mockResolvedValue({
         ok: true,
-        job: {
-          id: "j-1",
-          status: "IN_PROGRESS",
-          attemptCount: 1,
-          errorCode: null,
-          errorMessage: null,
-        },
+        job: { id: "j-1", status: "RUNNING", attemptCount: 1, errorCode: null, errorMessage: null },
       });
       mockLogout.mockResolvedValue(undefined);
-      const { unmount } = render(<PosDocumentApp />);
+      render(<PosDocumentApp />);
       await screen.findByText(/Upload POS archive/i);
       const fileInput = screen.getByLabelText(/zip archive/i) as HTMLInputElement;
       await userEvent.upload(
@@ -409,11 +403,92 @@ describe("polling lifecycle", () => {
       const callsAfterLogout = mockGetJob.mock.calls.length;
       await vi.advanceTimersByTimeAsync(10000);
       expect(mockGetJob.mock.calls.length).toBe(callsAfterLogout);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 
-      // Unmount also stops any future polling.
+  it("stops polling on unmount while the job is still active", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+      mockUpload.mockResolvedValue({ posRecordId: "r-1", jobId: "j-1" });
+      mockGetJob.mockResolvedValue({
+        ok: true,
+        job: { id: "j-1", status: "RUNNING", attemptCount: 1, errorCode: null, errorMessage: null },
+      });
+      const { unmount } = render(<PosDocumentApp />);
+      await screen.findByText(/Upload POS archive/i);
+      const fileInput = screen.getByLabelText(/zip archive/i) as HTMLInputElement;
+      await userEvent.upload(
+        fileInput,
+        new File(["PK"], "archive.zip", { type: "application/zip" }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Upload" }));
+      await waitFor(() => expect(mockGetJob).toHaveBeenCalledTimes(1));
+
       unmount();
+      const callsAfterUnmount = mockGetJob.mock.calls.length;
       await vi.advanceTimersByTimeAsync(10000);
-      expect(mockGetJob.mock.calls.length).toBe(callsAfterLogout);
+      expect(mockGetJob.mock.calls.length).toBe(callsAfterUnmount);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps polling through RETRY_SCHEDULED with attempt counts", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+      mockUpload.mockResolvedValue({ posRecordId: "r-1", jobId: "j-1" });
+      mockGetJob
+        .mockResolvedValueOnce({
+          ok: true,
+          job: {
+            id: "j-1",
+            status: "RUNNING",
+            attemptCount: 1,
+            errorCode: null,
+            errorMessage: null,
+          },
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          job: {
+            id: "j-1",
+            status: "RETRY_SCHEDULED",
+            attemptCount: 2,
+            errorCode: "OCR_TIMEOUT",
+            errorMessage: null,
+          },
+        })
+        .mockResolvedValue({
+          ok: true,
+          job: {
+            id: "j-1",
+            status: "COMPLETED",
+            attemptCount: 3,
+            errorCode: null,
+            errorMessage: null,
+          },
+        });
+      render(<PosDocumentApp />);
+      await screen.findByText(/Upload POS archive/i);
+      const fileInput = screen.getByLabelText(/zip archive/i) as HTMLInputElement;
+      await userEvent.upload(
+        fileInput,
+        new File(["PK"], "archive.zip", { type: "application/zip" }),
+      );
+      await userEvent.click(screen.getByRole("button", { name: "Upload" }));
+      await waitFor(() => expect(mockGetJob).toHaveBeenCalledTimes(1));
+
+      await vi.advanceTimersByTimeAsync(2100);
+      await waitFor(() => expect(mockGetJob).toHaveBeenCalledTimes(2));
+      expect(await screen.findByText(/attempts: 2/)).toBeInTheDocument();
+
+      await vi.advanceTimersByTimeAsync(2100);
+      await waitFor(() => expect(screen.getByText(/Processing completed./i)).toBeInTheDocument());
+      expect(mockGetJob).toHaveBeenCalledTimes(3);
     } finally {
       vi.useRealTimers();
     }
@@ -428,7 +503,7 @@ describe("polling lifecycle", () => {
         ok: true,
         job: {
           id: "j-1",
-          status: "IN_PROGRESS",
+          status: "RUNNING",
           attemptCount: 5,
           errorCode: null,
           errorMessage: null,
