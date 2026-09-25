@@ -280,6 +280,28 @@ export async function deleteRecord(
   }
 }
 
+/**
+ * Verify a REVIEW_REQUIRED record, transitioning it to COMPLETED.
+ * This is the backend's sole COMPLETED path; `expectedVersion` must match the
+ * current record version (412 on mismatch).
+ */
+export async function verifyRecord(
+  posRecordId: string,
+  expectedVersion: number,
+): Promise<{ ok: true; record: PosRecordDetail } | { ok: false; error: ApiError }> {
+  try {
+    const response = await request(`/pos-records/${encodeURIComponent(posRecordId)}/verification`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...csrfHeaders() },
+      body: JSON.stringify({ expectedVersion }),
+    });
+    if (!response.ok) return { ok: false, error: await parseErrorResponse(response) };
+    return { ok: true, record: parseRecordDetail(await response.json(), posRecordId) };
+  } catch {
+    return { ok: false, error: networkError() };
+  }
+}
+
 export interface PosDocument {
   id: string;
   filename: string;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   type ApiError,
   MAX_STRING_LENGTHS,
@@ -11,10 +11,32 @@ interface Props {
   onUnauthorized: () => void;
   onResults: (page: SearchPage | null) => void;
   onSelectRecord: (posRecordId: string) => void;
+  /** Bumped by the parent after a mutation so the last submitted search re-runs. */
+  refreshToken: number;
 }
 
 function orNotAvailable(value: string | null | undefined): string {
   return value && value.length > 0 ? value : "Not available";
+}
+
+type PageItem = { type: "page"; page: number } | { type: "ellipsis"; id: string };
+
+// Show every page when there are few, otherwise first/last plus a window around the current page.
+function windowedPages(current: number, totalPages: number): PageItem[] {
+  if (totalPages <= 7) {
+    return Array.from({ length: totalPages }, (_, index) => ({
+      type: "page" as const,
+      page: index,
+    }));
+  }
+  const items: PageItem[] = [{ type: "page", page: 0 }];
+  const start = Math.max(1, current - 1);
+  const end = Math.min(totalPages - 2, current + 1);
+  if (start > 1) items.push({ type: "ellipsis", id: "before-window" });
+  for (let page = start; page <= end; page += 1) items.push({ type: "page", page });
+  if (end < totalPages - 2) items.push({ type: "ellipsis", id: "after-window" });
+  items.push({ type: "page", page: totalPages - 1 });
+  return items;
 }
 
 function ResultRow({
@@ -67,7 +89,12 @@ function ResultRow({
   );
 }
 
-export default function SearchPanel({ onUnauthorized, onResults, onSelectRecord }: Props) {
+export default function SearchPanel({
+  onUnauthorized,
+  onResults,
+  onSelectRecord,
+  refreshToken,
+}: Props) {
   const [erefNumber, setErefNumber] = useState("");
   const [policyNumber, setPolicyNumber] = useState("");
   const [policyholderName, setPolicyholderName] = useState("");
@@ -77,7 +104,16 @@ export default function SearchPanel({ onUnauthorized, onResults, onSelectRecord 
   const [results, setLocalResults] = useState<SearchPage | null>(null);
   const [searched, setSearched] = useState(false);
 
+  // Request-sequence guard: only the newest search response is applied.
+  const searchSeq = useRef(0);
+  const lastPage = useRef(0);
+  const hasSearched = useRef(false);
+  const firstRefresh = useRef(true);
+
   const runSearch = async (targetPage: number) => {
+    const seq = ++searchSeq.current;
+    lastPage.current = targetPage;
+    hasSearched.current = true;
     setLoading(true);
     setError(null);
     const outcome = await searchRecords({
@@ -87,11 +123,23 @@ export default function SearchPanel({ onUnauthorized, onResults, onSelectRecord 
       fuzzyName: fuzzyName || undefined,
       page: targetPage,
     });
+    // Drop stale responses: a newer search has since been requested.
+    if (seq !== searchSeq.current) return;
     setLoading(false);
     setSearched(true);
     if (outcome.ok) {
-      setLocalResults(outcome.results);
-      onResults(outcome.results);
+      const page = outcome.results;
+      // Out-of-range recovery: the requested page is empty but results exist
+      // (e.g. the total shrank), so jump to the last valid page.
+      if (page.items.length === 0 && page.totalElements > 0 && targetPage > 0) {
+        const lastValid = Math.max(0, Math.ceil(page.totalElements / page.size) - 1);
+        if (lastValid !== targetPage) {
+          void runSearch(lastValid);
+          return;
+        }
+      }
+      setLocalResults(page);
+      onResults(page);
     } else if (outcome.error.status === 401) {
       onUnauthorized();
     } else {
@@ -100,6 +148,21 @@ export default function SearchPanel({ onUnauthorized, onResults, onSelectRecord 
       onResults(null);
     }
   };
+
+  // Always invoke the latest runSearch (with fresh filter state) from the effect.
+  const runSearchRef = useRef(runSearch);
+  runSearchRef.current = runSearch;
+
+  // Re-run the last submitted search when the parent bumps the refresh token.
+  useEffect(() => {
+    if (firstRefresh.current) {
+      firstRefresh.current = false;
+      return;
+    }
+    if (hasSearched.current) {
+      void runSearchRef.current(lastPage.current);
+    }
+  }, [refreshToken]);
 
   const handleClear = () => {
     setErefNumber("");
@@ -209,34 +272,53 @@ export default function SearchPanel({ onUnauthorized, onResults, onSelectRecord 
         {results && results.items.length > 0 ? (
           <>
             <p className="mb-2 text-sm">
-              {results.totalElements} result{results.totalElements === 1 ? "" : "s"}
-              {totalPages > 1 ? ` · page ${results.page + 1} of ${totalPages}` : ""}
+              {results.totalElements} result{results.totalElements === 1 ? "" : "s"} · page{" "}
+              {results.page + 1} of {Math.max(totalPages, 1)}
             </p>
             <ul className="space-y-2">
               {results.items.map((record) => (
                 <ResultRow key={record.id} record={record} onSelect={onSelectRecord} />
               ))}
             </ul>
-            {totalPages > 1 ? (
-              <div className="mt-3 flex gap-2">
-                <button
-                  type="button"
-                  disabled={results.page <= 0 || loading}
-                  className="rounded border border-stone-400 px-3 py-1 text-sm disabled:opacity-50"
-                  onClick={() => void runSearch(results.page - 1)}
-                >
-                  Previous
-                </button>
-                <button
-                  type="button"
-                  disabled={results.page >= totalPages - 1 || loading}
-                  className="rounded border border-stone-400 px-3 py-1 text-sm disabled:opacity-50"
-                  onClick={() => void runSearch(results.page + 1)}
-                >
-                  Next
-                </button>
-              </div>
-            ) : null}
+            <nav
+              aria-label="Search results pages"
+              className="mt-3 flex flex-wrap items-center gap-2"
+            >
+              <button
+                type="button"
+                disabled={results.page <= 0 || loading}
+                className="rounded border border-stone-400 px-3 py-1 text-sm disabled:opacity-50"
+                onClick={() => void runSearch(results.page - 1)}
+              >
+                Previous
+              </button>
+              {windowedPages(results.page, Math.max(totalPages, 1)).map((item) =>
+                item.type === "ellipsis" ? (
+                  <span key={item.id} className="px-1 text-sm">
+                    …
+                  </span>
+                ) : (
+                  <button
+                    key={item.page}
+                    type="button"
+                    disabled={loading || item.page === results.page}
+                    aria-current={item.page === results.page ? "page" : undefined}
+                    className="rounded border border-stone-400 px-3 py-1 text-sm disabled:opacity-50"
+                    onClick={() => void runSearch(item.page)}
+                  >
+                    {item.page + 1}
+                  </button>
+                ),
+              )}
+              <button
+                type="button"
+                disabled={results.page >= totalPages - 1 || loading}
+                className="rounded border border-stone-400 px-3 py-1 text-sm disabled:opacity-50"
+                onClick={() => void runSearch(results.page + 1)}
+              >
+                Next
+              </button>
+            </nav>
           </>
         ) : null}
       </div>

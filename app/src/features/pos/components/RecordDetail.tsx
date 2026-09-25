@@ -9,6 +9,7 @@ import {
   type PosRecordDetail,
   sourceArchiveUrl,
   updateRecord,
+  verifyRecord,
 } from "../api";
 
 interface Props {
@@ -87,6 +88,7 @@ export default function RecordDetail({
   const blankChange = changedKeys.some((key) => !editValues?.[key].trim());
   const canEdit =
     isReviewer && (record.status === "REVIEW_REQUIRED" || record.status === "COMPLETED");
+  const canVerify = isReviewer && record.status === "REVIEW_REQUIRED";
 
   const submitEdit = async () => {
     if (!canEdit || pending || changedKeys.length === 0 || blankChange) return;
@@ -126,6 +128,25 @@ export default function RecordDetail({
       await onReload();
     } else {
       setError(outcome.error);
+    }
+  };
+
+  const submitVerify = async () => {
+    if (!canVerify || pending) return;
+    setPending(true);
+    setError(null);
+    setMessage("");
+    const outcome = await verifyRecord(record.id, record.version);
+    setPending(false);
+    if (outcome.ok) {
+      onRecordUpdated(outcome.record);
+    } else if (outcome.error.status === 401) {
+      onUnauthorized();
+    } else {
+      setError(outcome.error);
+      if (outcome.error.status === 412) {
+        await onReload();
+      }
     }
   };
 
@@ -185,6 +206,16 @@ export default function RecordDetail({
               className="rounded border border-stone-400 px-4 py-2 text-sm"
             >
               Edit
+            </button>
+          ) : null}
+          {canVerify && !confirmDelete ? (
+            <button
+              type="button"
+              disabled={pending}
+              onClick={() => void submitVerify()}
+              className="rounded border border-green-600 px-4 py-2 text-sm disabled:opacity-50"
+            >
+              Verify
             </button>
           ) : null}
           {isReviewer && !confirmDelete ? (
@@ -299,7 +330,7 @@ export default function RecordDetail({
               className="flex flex-wrap items-center justify-between gap-2 rounded border border-stone-300 p-2 text-sm dark:border-slate-600"
             >
               <span>
-                {document.filename} · Processing status: {document.processingStatus}
+                {document.filename} | {document.processingStatus}
               </span>
               {isReviewer ? (
                 <a

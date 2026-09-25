@@ -24,6 +24,7 @@ vi.mock("./api", async (importOriginal) => {
     getRecordDocuments: vi.fn(),
     updateRecord: vi.fn(),
     deleteRecord: vi.fn(),
+    verifyRecord: vi.fn(),
     getIngestionJob: vi.fn(),
     uploadZip: vi.fn(),
   };
@@ -36,8 +37,11 @@ const mockGetRecord = vi.mocked(api.getRecord);
 const mockGetDocuments = vi.mocked(api.getRecordDocuments);
 const mockUpdateRecord = vi.mocked(api.updateRecord);
 const mockDeleteRecord = vi.mocked(api.deleteRecord);
+const mockVerifyRecord = vi.mocked(api.verifyRecord);
 const mockGetJob = vi.mocked(api.getIngestionJob);
 const mockUpload = vi.mocked(api.uploadZip);
+
+type SearchResult = Awaited<ReturnType<typeof api.searchRecords>>;
 
 const signedInUser = {
   email: "user@example.com",
@@ -276,6 +280,28 @@ describe("search and detail", () => {
     expect(screen.queryByText(/Open PDF/)).not.toBeInTheDocument(); // USER cannot open PDFs
   });
 
+  it("shows the filename and processing status on document rows", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+    mockGetRecord.mockResolvedValue({ ok: true, record: { ...recordDetail, documents: [] } });
+    mockGetDocuments.mockResolvedValue({
+      ok: true,
+      documents: [
+        {
+          id: "doc-1",
+          filename: "application.pdf",
+          documentType: "FA_PRUPLANNER_REPORT",
+          processingStatus: "SKIPPED",
+        },
+      ],
+    });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
+    expect(await screen.findByText("application.pdf | SKIPPED")).toBeInTheDocument();
+  });
+
   it("REVIEWER sees Open PDF and Download original ZIP using relative URLs", async () => {
     mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
     const recordId = "11111111-1111-1111-1111-111111111111";
@@ -344,6 +370,41 @@ async function showReviewerRecord() {
   await userEvent.click(screen.getByRole("button", { name: "Search" }));
   await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
   await screen.findByRole("button", { name: "Edit" });
+}
+
+// Load a REVIEW_REQUIRED record for a reviewer so the Verify button is visible.
+async function showReviewerReviewRequiredRecord() {
+  mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+  mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+  mockGetRecord.mockResolvedValue({
+    ok: true,
+    record: { ...recordDetail, status: "REVIEW_REQUIRED" },
+  });
+  render(<PosDocumentApp />);
+  await screen.findByText(/Search POS records/i);
+  await userEvent.click(screen.getByRole("button", { name: "Search" }));
+  await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
+  await screen.findByRole("button", { name: "Verify" });
+}
+
+// Build a search page of `count` results for a given zero-based page (size 20).
+function makeSearchPage(count: number, page = 0, size = 20) {
+  const items = [];
+  for (let i = 0; i < Math.min(size, Math.max(0, count - page * size)); i += 1) {
+    const globalIndex = page * size + i;
+    items.push({
+      id: `id-${globalIndex}`,
+      erefNumber: `EREF-${globalIndex}`,
+      policyNumber: `P${globalIndex}`,
+      policyholderName: `Name ${globalIndex}`,
+      consultantName: "Con",
+      policyCreateDate: "2026-01-01",
+      status: "COMPLETED",
+      uploadedAt: "2026-01-02T00:00:00Z",
+      updatedAt: "2026-01-03T00:00:00Z",
+    });
+  }
+  return { items, page, size, totalElements: count, totalPages: Math.ceil(count / size) };
 }
 
 describe("reviewer record actions", () => {
@@ -426,6 +487,351 @@ describe("reviewer record actions", () => {
     await userEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
     expect(await screen.findByText("Record changed concurrently, try again.")).toBeInTheDocument();
     await waitFor(() => expect(mockGetRecord).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("verify action", () => {
+  it("shows Verify for a reviewer on a REVIEW_REQUIRED record", async () => {
+    await showReviewerReviewRequiredRecord();
+    expect(screen.getByRole("button", { name: "Verify" })).toBeInTheDocument();
+  });
+
+  it("hides Verify on a non-REVIEW_REQUIRED record", async () => {
+    // recordDetail is COMPLETED, so Verify must not appear even for a reviewer.
+    await showReviewerRecord();
+    expect(screen.queryByRole("button", { name: "Verify" })).not.toBeInTheDocument();
+  });
+
+  it("hides Verify for a USER session", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: signedInUser });
+    mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+    mockGetRecord.mockResolvedValue({
+      ok: true,
+      record: { ...recordDetail, status: "REVIEW_REQUIRED" },
+    });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
+    expect(await screen.findByText("REVIEW_REQUIRED")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Verify" })).not.toBeInTheDocument();
+  });
+
+  it("verify success updates status/version and re-runs the current search", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+    mockGetRecord.mockResolvedValue({
+      ok: true,
+      record: { ...recordDetail, status: "REVIEW_REQUIRED" },
+    });
+    mockVerifyRecord.mockResolvedValue({
+      ok: true,
+      record: { ...recordDetail, status: "COMPLETED", version: recordDetail.version + 1 },
+    });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
+    const searchesBefore = mockSearch.mock.calls.length;
+    await userEvent.click(await screen.findByRole("button", { name: "Verify" }));
+    expect(mockVerifyRecord).toHaveBeenCalledWith(recordDetail.id, recordDetail.version);
+    expect(await screen.findByText(String(recordDetail.version + 1))).toBeInTheDocument();
+    expect(screen.queryByText("REVIEW_REQUIRED")).not.toBeInTheDocument();
+    await waitFor(() => expect(mockSearch.mock.calls.length).toBeGreaterThan(searchesBefore));
+  });
+
+  it("shows a banner with the API detail on a 409 verify conflict", async () => {
+    mockVerifyRecord.mockResolvedValue({
+      ok: false,
+      error: {
+        status: 409,
+        code: "POS_RECORD_NOT_REVIEWABLE",
+        title: "Not reviewable",
+        detail: "status is COMPLETED",
+      },
+    });
+    await showReviewerReviewRequiredRecord();
+    await userEvent.click(screen.getByRole("button", { name: "Verify" }));
+    expect(await screen.findByText("Not reviewable")).toBeInTheDocument();
+    expect(screen.getByText("status is COMPLETED")).toBeInTheDocument();
+  });
+
+  it("shows a banner and reloads the record on a 412 verify mismatch", async () => {
+    mockGetRecord
+      .mockResolvedValueOnce({ ok: true, record: { ...recordDetail, status: "REVIEW_REQUIRED" } })
+      .mockResolvedValueOnce({
+        ok: true,
+        record: { ...recordDetail, status: "REVIEW_REQUIRED", version: 5 },
+      });
+    mockVerifyRecord.mockResolvedValue({
+      ok: false,
+      error: {
+        status: 412,
+        code: "POS_RECORD_VERSION_MISMATCH",
+        title: "Version mismatch",
+        detail: "",
+      },
+    });
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
+    await userEvent.click(await screen.findByRole("button", { name: "Verify" }));
+    expect(await screen.findByText("Version mismatch")).toBeInTheDocument();
+    await waitFor(() => expect(mockGetRecord).toHaveBeenCalledTimes(2));
+  });
+
+  it("shows a banner with the API detail on a 422 prerequisite failure", async () => {
+    mockVerifyRecord.mockResolvedValue({
+      ok: false,
+      error: {
+        status: 422,
+        code: "VERIFICATION_PREREQUISITES_UNMET",
+        title: "Prerequisites unmet",
+        detail: "consultantName is required",
+      },
+    });
+    await showReviewerReviewRequiredRecord();
+    await userEvent.click(screen.getByRole("button", { name: "Verify" }));
+    expect(await screen.findByText("Prerequisites unmet")).toBeInTheDocument();
+    expect(screen.getByText("consultantName is required")).toBeInTheDocument();
+  });
+});
+
+describe("search pagination and freshness", () => {
+  it("shows an always-visible indicator plus numbered and Previous/Next controls", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: signedInUser });
+    mockSearch.mockResolvedValue({ ok: true, results: makeSearchPage(40, 0) });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.type(screen.getByLabelText(/eref number/i), "EREF-X");
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByText("40 results · page 1 of 2")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "2" })).toBeInTheDocument();
+  });
+
+  it("keeps the submitted filters when paging to a numbered page", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: signedInUser });
+    mockSearch.mockResolvedValue({ ok: true, results: makeSearchPage(40, 0) });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.type(screen.getByLabelText(/eref number/i), "EREF-X");
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    await screen.findByText("40 results · page 1 of 2");
+    await userEvent.click(screen.getByRole("button", { name: "2" }));
+    await waitFor(() => {
+      const last = mockSearch.mock.calls.at(-1)?.[0];
+      expect(last?.page).toBe(1);
+      expect(last?.erefNumber).toBe("EREF-X");
+    });
+  });
+
+  it("recovers to the last valid page when a requested page is out of range", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: signedInUser });
+    mockSearch
+      .mockResolvedValueOnce({ ok: true, results: makeSearchPage(40, 0) })
+      // The next request (page 1) comes back empty because the total shrank.
+      .mockResolvedValueOnce({
+        ok: true,
+        results: { items: [], page: 1, size: 20, totalElements: 15, totalPages: 1 },
+      })
+      // The recovery request for the last valid page (0) succeeds.
+      .mockResolvedValueOnce({ ok: true, results: makeSearchPage(15, 0) });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByText("40 results · page 1 of 2")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await waitFor(() => {
+      const last = mockSearch.mock.calls.at(-1)?.[0];
+      expect(last?.page).toBe(0);
+    });
+    expect(await screen.findByText("15 results · page 1 of 1")).toBeInTheDocument();
+  });
+
+  it("does not render a stale search response when a newer search is in flight", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValue({ ok: true, results: makeSearchPage(40, 0) });
+    mockGetRecord.mockResolvedValue({ ok: true, record: recordDetail });
+    mockGetDocuments.mockResolvedValue({ ok: true, documents: [] });
+    mockDeleteRecord.mockResolvedValue({ ok: true });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByText("40 results · page 1 of 2")).toBeInTheDocument();
+    // Select a record so it can be deleted (the delete will bump the refresh token).
+    const viewDetails = await screen.findAllByRole("button", { name: /view details/i });
+    await userEvent.click(viewDetails[0]);
+    await screen.findByRole("button", { name: "Delete" });
+    // A page-1 search (A) starts and stays in flight.
+    let resolveA: (value: SearchResult) => void = () => {};
+    const pendingA: Promise<SearchResult> = new Promise((resolve) => {
+      resolveA = resolve;
+    });
+    mockSearch.mockReturnValueOnce(pendingA);
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    // Deleting bumps the refresh token, firing search (B) at the same page while A is in flight.
+    let resolveB: (value: SearchResult) => void = () => {};
+    const pendingB: Promise<SearchResult> = new Promise((resolve) => {
+      resolveB = resolve;
+    });
+    mockSearch.mockReturnValueOnce(pendingB);
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm delete" }));
+    await waitFor(() => expect(mockSearch.mock.calls.length).toBe(3));
+    // The NEW search (B) resolves first.
+    resolveB({ ok: true, results: makeSearchPage(25, 1) });
+    await waitFor(() => expect(screen.getByText("25 results · page 2 of 2")).toBeInTheDocument());
+    // The OLD search (A) resolves LAST and must be dropped.
+    resolveA({ ok: true, results: makeSearchPage(100, 1) });
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(screen.getByText("25 results · page 2 of 2")).toBeInTheDocument();
+    expect(screen.queryByText(/100 results/)).not.toBeInTheDocument();
+  });
+
+  it("delete -> reupload same eRef: search shows the new record and it opens without 404", async () => {
+    const oldSummary = {
+      id: "old-id",
+      erefNumber: "EREF-A",
+      policyNumber: "PA",
+      policyholderName: "Holder Old",
+      consultantName: "Con",
+      policyCreateDate: "2026-01-01",
+      status: "REVIEW_REQUIRED",
+      uploadedAt: "2026-01-02T00:00:00Z",
+      updatedAt: "2026-01-02T00:00:00Z",
+    };
+    const newSummary = { ...oldSummary, id: "new-id", policyholderName: "Holder New" };
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch
+      .mockResolvedValueOnce({
+        ok: true,
+        results: { items: [oldSummary], page: 0, size: 20, totalElements: 1, totalPages: 1 },
+      })
+      // After the delete, the refreshed search lists the re-uploaded (new) record.
+      .mockResolvedValue({
+        ok: true,
+        results: { items: [newSummary], page: 0, size: 20, totalElements: 1, totalPages: 1 },
+      });
+    mockGetRecord.mockResolvedValue({
+      ok: true,
+      record: { ...recordDetail, id: "new-id", erefNumber: "EREF-A" },
+    });
+    mockGetDocuments.mockResolvedValue({ ok: true, documents: [] });
+    mockDeleteRecord.mockResolvedValue({ ok: true });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.type(screen.getByLabelText(/eref number/i), "EREF-A");
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByText("Holder Old")).toBeInTheDocument();
+    // Open and delete the old record.
+    await userEvent.click(screen.getByRole("button", { name: /view details/i }));
+    await screen.findByRole("button", { name: "Delete" });
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(await screen.findByRole("button", { name: "Confirm delete" }));
+    // The search refreshes: the stale old row is gone and the new record is listed.
+    await waitFor(() => expect(mockSearch.mock.calls.length).toBe(2));
+    expect(await screen.findByText("Holder New")).toBeInTheDocument();
+    expect(screen.queryByText("Holder Old")).not.toBeInTheDocument();
+    // Viewing the new record opens its detail without a 404.
+    await userEvent.click(screen.getByRole("button", { name: /view details/i }));
+    expect(await screen.findByText(/Record details/i)).toBeInTheDocument();
+  });
+
+  it("clears the selection silently when a record returns 404", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValue({
+      ok: true,
+      results: {
+        items: [
+          {
+            id: "ghost-id",
+            erefNumber: "EREF-GHOST",
+            policyNumber: "PG",
+            policyholderName: "Ghost",
+            consultantName: "Con",
+            policyCreateDate: "2026-01-01",
+            status: "REVIEW_REQUIRED",
+            uploadedAt: "2026-01-02T00:00:00Z",
+            updatedAt: "2026-01-02T00:00:00Z",
+          },
+        ],
+        page: 0,
+        size: 20,
+        totalElements: 1,
+        totalPages: 1,
+      },
+    });
+    mockGetRecord.mockResolvedValue({
+      ok: false,
+      error: { status: 404, code: "POS_RECORD_NOT_FOUND", title: "Not found", detail: "" },
+    });
+    mockGetDocuments.mockResolvedValue({ ok: true, documents: [] });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
+    await waitFor(() => expect(screen.queryByText(/Record details/i)).not.toBeInTheDocument());
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("windows numbered pages with ellipses when there are more than 7 pages", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: signedInUser });
+    // 200 results = 10 pages; current zero-based page 3 ("4" of 10).
+    mockSearch.mockResolvedValue({ ok: true, results: makeSearchPage(200, 3) });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByText("200 results · page 4 of 10")).toBeInTheDocument();
+    // First page, window around the current page (2,3,4), last page — nothing else.
+    expect(screen.getByRole("button", { name: "1" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "3" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "4" })).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("button", { name: "5" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "10" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "2" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "6" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "7" })).not.toBeInTheDocument();
+    expect(screen.getAllByText("…")).toHaveLength(2);
+  });
+
+  it("re-runs the current search when an upload completes", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+    mockUpload.mockResolvedValue({ posRecordId: "r-1", jobId: "j-1" });
+    mockGetJob.mockResolvedValue({
+      ok: true,
+      job: { id: "j-1", status: "COMPLETED", attemptCount: 1, errorCode: null, errorMessage: null },
+    });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    expect(await screen.findByText("1 result · page 1 of 1")).toBeInTheDocument();
+    const fileInput = screen.getByLabelText(/zip archive/i) as HTMLInputElement;
+    await userEvent.upload(fileInput, new File(["PK"], "archive.zip", { type: "application/zip" }));
+    await userEvent.click(screen.getByRole("button", { name: "Upload" }));
+    await waitFor(() => expect(mockSearch.mock.calls.length).toBe(2));
+  });
+
+  it("re-runs the current search after a successful edit", async () => {
+    await showReviewerRecord();
+    expect(mockSearch.mock.calls.length).toBe(1);
+    mockUpdateRecord.mockResolvedValue({
+      ok: true,
+      record: { ...recordDetail, policyNumber: "P777", version: recordDetail.version + 1 },
+    });
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const policy = screen.getAllByLabelText("Policy number").at(-1) as HTMLInputElement;
+    await userEvent.clear(policy);
+    await userEvent.type(policy, "P777");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByText("P777")).toBeInTheDocument();
+    await waitFor(() => expect(mockSearch.mock.calls.length).toBe(2));
   });
 });
 
