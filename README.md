@@ -153,6 +153,40 @@ npm run lint       # biome check
 npm run build      # static build to dist/
 ```
 
+### Local POS mock API
+
+For browser testing without the backend, run the following in `app/`:
+
+```bash
+npm ci
+npm run dev:mock       # reviewer session at http://127.0.0.1:3000/pos/
+npm run dev:mock:user  # USER session, with reviewer controls hidden
+```
+
+Open `http://127.0.0.1:3000/pos/`. The mock is enabled only by these opt-in
+commands and bound to loopback. `npm run dev`, `npm run build`, and
+`npm run preview` do not serve mock API responses. It uses only process memory;
+restart the dev server to reset the records and session. No backend, live service,
+or persistent storage is contacted. Uploaded ZIP bytes are kept in memory and
+their contents are not inspected.
+
+Search without filters to see three examples. `Harper Lee` starts COMPLETED;
+editing her metadata moves the record to REVIEW_REQUIRED. `Morgan Chen` provides
+a second eRef and policy number for duplicate conflict tests; its PROCESSING
+status gives a nonreviewable edit conflict. Deleting the record
+named `Delete conflict example` always returns HTTP 409. Upload a small ZIP to
+see a completed ingestion job and a new searchable record. Each record offers a
+sample PDF and original ZIP download to a reviewer.
+
+The edit and delete controls are in PR #20 (`feature/pos-record-edit-delete`) and
+are not yet on `main`. This mock already serves their PATCH and DELETE requests;
+use a temporary local integration checkout or wait for PR #20 to land to test
+those controls in the browser. To exercise API conflicts directly, copy the
+`XSRF-TOKEN` cookie from `GET /api/v1/auth/me` into both the Cookie and
+`X-XSRF-TOKEN` headers of a PATCH or DELETE request. A stale `expectedVersion`
+returns 412, a duplicate eRef or policy number returns 409, and a missing or
+altered CSRF token returns 403.
+
 ### Nginx gateway verification
 
 ```bash

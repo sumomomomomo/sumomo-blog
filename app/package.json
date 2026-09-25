@@ -4,6 +4,8 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev --host",
+    "dev:mock": "POS_MOCK_API=1 astro dev --host 127.0.0.1",
+    "dev:mock:user": "POS_MOCK_API=1 POS_MOCK_ROLE=USER astro dev --host 127.0.0.1",
     "start": "astro preview",
     "build": "astro build",
     "preview": "astro preview",
