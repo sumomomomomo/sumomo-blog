@@ -22,6 +22,8 @@ vi.mock("./api", async (importOriginal) => {
     searchRecords: vi.fn(),
     getRecord: vi.fn(),
     getRecordDocuments: vi.fn(),
+    updateRecord: vi.fn(),
+    deleteRecord: vi.fn(),
     getIngestionJob: vi.fn(),
     uploadZip: vi.fn(),
   };
@@ -32,6 +34,8 @@ const mockLogout = vi.mocked(api.logout);
 const mockSearch = vi.mocked(api.searchRecords);
 const mockGetRecord = vi.mocked(api.getRecord);
 const mockGetDocuments = vi.mocked(api.getRecordDocuments);
+const mockUpdateRecord = vi.mocked(api.updateRecord);
+const mockDeleteRecord = vi.mocked(api.deleteRecord);
 const mockGetJob = vi.mocked(api.getIngestionJob);
 const mockUpload = vi.mocked(api.uploadZip);
 
@@ -250,7 +254,14 @@ describe("search and detail", () => {
     mockGetRecord.mockResolvedValue({ ok: true, record: recordDetail });
     mockGetDocuments.mockResolvedValue({
       ok: true,
-      documents: [{ id: "doc-1", documentType: "APPLICATION", processingStatus: "COMPLETED" }],
+      documents: [
+        {
+          id: "doc-1",
+          filename: "application.pdf",
+          documentType: "UNKNOWN",
+          processingStatus: "COMPLETED",
+        },
+      ],
     });
     render(<PosDocumentApp />);
     await screen.findByText(/Search POS records/i);
@@ -258,7 +269,10 @@ describe("search and detail", () => {
     expect(await screen.findByText(/EREF-2026-00123/)).toBeInTheDocument();
     await userEvent.click(screen.getByRole("button", { name: /view details/i }));
     expect(await screen.findByText(/Record details/i)).toBeInTheDocument();
-    expect(screen.getByText(/APPLICATION/)).toBeInTheDocument();
+    expect(screen.getByText(/application.pdf/)).toBeInTheDocument();
+    expect(screen.queryByText(/Type:/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
     expect(screen.queryByText(/Open PDF/)).not.toBeInTheDocument(); // USER cannot open PDFs
   });
 
@@ -270,12 +284,26 @@ describe("search and detail", () => {
       record: {
         ...recordDetail,
         id: recordId,
-        documents: [{ id: "doc-1", documentType: "APPLICATION", processingStatus: "COMPLETED" }],
+        documents: [
+          {
+            id: "doc-1",
+            filename: "application.pdf",
+            documentType: "UNKNOWN",
+            processingStatus: "COMPLETED",
+          },
+        ],
       },
     });
     mockGetDocuments.mockResolvedValue({
       ok: true,
-      documents: [{ id: "doc-1", documentType: "APPLICATION", processingStatus: "COMPLETED" }],
+      documents: [
+        {
+          id: "doc-1",
+          filename: "application.pdf",
+          documentType: "UNKNOWN",
+          processingStatus: "COMPLETED",
+        },
+      ],
     });
     render(<PosDocumentApp />);
     await screen.findByText(/POS document portal/i);
@@ -305,6 +333,161 @@ describe("search and detail", () => {
     await userEvent.click(screen.getByRole("button", { name: "Search" }));
     expect(await screen.findByRole("link", { name: /sign in with google/i })).toBeInTheDocument();
     expect(screen.queryByText(/Test User/)).not.toBeInTheDocument();
+  });
+});
+
+async function showReviewerRecord() {
+  mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+  mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+  render(<PosDocumentApp />);
+  await screen.findByText(/Search POS records/i);
+  await userEvent.click(screen.getByRole("button", { name: "Search" }));
+  await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
+  await screen.findByRole("button", { name: "Edit" });
+}
+
+describe("reviewer record actions", () => {
+  it("only offers editing for reviewable statuses", async () => {
+    mockGetRecord.mockResolvedValue({
+      ok: true,
+      record: { ...recordDetail, status: "PROCESSING" },
+    });
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Search POS records/i);
+    await userEvent.click(screen.getByRole("button", { name: "Search" }));
+    await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
+    expect(await screen.findByText("PROCESSING")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit" })).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+  });
+
+  it("sends only changed fields and updates the displayed version", async () => {
+    mockUpdateRecord.mockResolvedValue({
+      ok: true,
+      record: { ...recordDetail, policyNumber: "P999", version: 4 },
+    });
+    await showReviewerRecord();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    const save = screen.getByRole("button", { name: "Save changes" });
+    expect(save).toBeDisabled();
+    const policy = screen.getAllByLabelText("Policy number").at(-1) as HTMLInputElement;
+    await userEvent.clear(policy);
+    await userEvent.type(policy, "P999");
+    await userEvent.click(save);
+    expect(mockUpdateRecord).toHaveBeenCalledWith(recordDetail.id, {
+      expectedVersion: 3,
+      policyNumber: "P999",
+    });
+    expect(await screen.findByText("P999")).toBeInTheDocument();
+    expect(screen.getByText("4")).toBeInTheDocument();
+  });
+
+  it("shows a 412 error and reloads the latest record", async () => {
+    mockGetRecord
+      .mockResolvedValueOnce({ ok: true, record: recordDetail })
+      .mockResolvedValueOnce({ ok: true, record: { ...recordDetail, version: 4 } });
+    mockUpdateRecord.mockResolvedValue({
+      ok: false,
+      error: {
+        status: 412,
+        code: "POS_RECORD_VERSION_MISMATCH",
+        title: "Version mismatch",
+        detail: "",
+      },
+    });
+    await showReviewerRecord();
+    await userEvent.click(screen.getByRole("button", { name: "Edit" }));
+    await userEvent.type(screen.getByLabelText("Consultant name"), " Jr");
+    await userEvent.click(screen.getByRole("button", { name: "Save changes" }));
+    expect(await screen.findByText("Version mismatch")).toBeInTheDocument();
+    await waitFor(() => expect(mockGetRecord).toHaveBeenCalledTimes(2));
+    expect(await screen.findByText("4")).toBeInTheDocument();
+  });
+
+  it("requires confirmation and clears the detail after delete", async () => {
+    mockDeleteRecord.mockResolvedValue({ ok: true });
+    await showReviewerRecord();
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    expect(mockDeleteRecord).not.toHaveBeenCalled();
+    await userEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    expect(mockDeleteRecord).toHaveBeenCalledWith(recordDetail.id);
+    await waitFor(() => expect(screen.queryByText("Record details")).not.toBeInTheDocument());
+  });
+
+  it("reloads after a delete conflict", async () => {
+    mockDeleteRecord.mockResolvedValue({
+      ok: false,
+      error: { status: 409, code: "POS_RECORD_DELETE_CONFLICT", title: "Conflict", detail: "" },
+    });
+    await showReviewerRecord();
+    await userEvent.click(screen.getByRole("button", { name: "Delete" }));
+    await userEvent.click(screen.getByRole("button", { name: "Confirm delete" }));
+    expect(await screen.findByText("Record changed concurrently, try again.")).toBeInTheDocument();
+    await waitFor(() => expect(mockGetRecord).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("record API transport", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("sends merge-patch content type and a fresh CSRF header", async () => {
+    document.cookie = "XSRF-TOKEN=edit-token; Path=/";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValue(
+        new Response(JSON.stringify({ ...recordDetail, version: 4 }), { status: 200 }),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const realApi = await vi.importActual<typeof import("./api")>("./api");
+    await realApi.updateRecord(recordDetail.id, { expectedVersion: 3, policyNumber: "P999" });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/v1/pos-records/${recordDetail.id}`,
+      expect.objectContaining({
+        method: "PATCH",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/merge-patch+json",
+          "X-XSRF-TOKEN": "edit-token",
+        },
+        body: JSON.stringify({ expectedVersion: 3, policyNumber: "P999" }),
+      }),
+    );
+    document.cookie = "XSRF-TOKEN=; Max-Age=0";
+  });
+
+  it("sends CSRF on delete and parses the stored filename", async () => {
+    document.cookie = "XSRF-TOKEN=delete-token; Path=/";
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(
+        new Response(
+          JSON.stringify([
+            {
+              id: "doc-1",
+              documentType: "UNKNOWN",
+              processingStatus: "COMPLETED",
+              storageObject: { originalFilename: "stored.pdf" },
+            },
+            { id: "doc-2", documentType: "UNKNOWN", processingStatus: "COMPLETED" },
+          ]),
+          { status: 200 },
+        ),
+      );
+    vi.stubGlobal("fetch", fetchMock);
+    const realApi = await vi.importActual<typeof import("./api")>("./api");
+    expect(await realApi.deleteRecord(recordDetail.id)).toEqual({ ok: true });
+    expect(fetchMock).toHaveBeenCalledWith(
+      `/api/v1/pos-records/${recordDetail.id}`,
+      expect.objectContaining({ method: "DELETE", headers: { "X-XSRF-TOKEN": "delete-token" } }),
+    );
+    expect(await realApi.getRecordDocuments(recordDetail.id)).toMatchObject({
+      ok: true,
+      documents: [{ filename: "stored.pdf" }, { filename: "" }],
+    });
+    document.cookie = "XSRF-TOKEN=; Max-Age=0";
   });
 });
 
