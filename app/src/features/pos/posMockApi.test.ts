@@ -12,6 +12,7 @@ let cookie = "";
 const id1 = "11111111-1111-4111-8111-111111111111";
 const id2 = "22222222-2222-4222-8222-222222222222";
 const id3 = "33333333-3333-4333-8333-333333333333";
+const id9 = "99999999-9999-4999-8999-999999999999";
 
 async function start(role = "REVIEWER") {
   const middleware = createPosMockMiddleware(role);
@@ -213,6 +214,68 @@ describe("local POS mock API", () => {
         ).json()
       ).totalElements,
     ).toBe(0);
+  });
+
+  it("verifies a prerequisite-met REVIEW_REQUIRED record and bumps its version", async () => {
+    await start();
+    // id3 is REVIEW_REQUIRED with a COMPLETED document and all required fields present.
+    const response = await call(`/pos-records/${id3}/verification`, "POST", { expectedVersion: 0 });
+    expect(response.status).toBe(200);
+    const verified = await response.json();
+    expect(verified).toMatchObject({ status: "COMPLETED", version: 1 });
+    expect(verified.updatedAt).toBeTruthy();
+    // A second verify is now a conflict (no longer REVIEW_REQUIRED).
+    expect(
+      (await call(`/pos-records/${id3}/verification`, "POST", { expectedVersion: 1 })).status,
+    ).toBe(409);
+  });
+
+  it("rejects verifying a non-REVIEW_REQUIRED record with 409", async () => {
+    await start();
+    const response = await call(`/pos-records/${id1}/verification`, "POST", { expectedVersion: 0 });
+    expect(response.status).toBe(409);
+    expect((await response.json()).code).toBe("POS_RECORD_NOT_REVIEWABLE");
+  });
+
+  it("rejects verifying with a stale expectedVersion with 412", async () => {
+    await start();
+    const response = await call(`/pos-records/${id3}/verification`, "POST", { expectedVersion: 7 });
+    expect(response.status).toBe(412);
+    expect((await response.json()).code).toBe("POS_RECORD_VERSION_MISMATCH");
+  });
+
+  it("rejects verifying a record with unmet prerequisites with 422", async () => {
+    await start();
+    // id9 is REVIEW_REQUIRED but has a PENDING document.
+    const response = await call(`/pos-records/${id9}/verification`, "POST", { expectedVersion: 0 });
+    expect(response.status).toBe(422);
+    expect((await response.json()).code).toBe("VERIFICATION_PREREQUISITES_UNMET");
+  });
+
+  it("denies verification for a USER session", async () => {
+    await start("USER");
+    const response = await call(`/pos-records/${id3}/verification`, "POST", { expectedVersion: 0 });
+    expect(response.status).toBe(403);
+    expect((await response.json()).code).toBe("FORBIDDEN");
+  });
+
+  it("rejects verification with a missing or altered CSRF token", async () => {
+    await start();
+    const missing = await call(
+      `/pos-records/${id3}/verification`,
+      "POST",
+      { expectedVersion: 0 },
+      false,
+    );
+    expect(missing.status).toBe(403);
+    expect(missing.headers.get("content-type")).toContain("application/problem+json");
+    const altered = await fetch(`${base}/pos-records/${id3}/verification`, {
+      method: "POST",
+      headers: { Cookie: cookie, "X-XSRF-TOKEN": "wrong", "Content-Type": "application/json" },
+      body: JSON.stringify({ expectedVersion: 0 }),
+    });
+    expect(altered.status).toBe(403);
+    expect((await altered.json()).code).toBe("INVALID_CSRF_TOKEN");
   });
 
   it("shows USER identity and denies reviewer mutations and invalid CSRF", async () => {

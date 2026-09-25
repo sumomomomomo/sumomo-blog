@@ -24,7 +24,7 @@ function samplePdf() {
 const PDF = samplePdf();
 const NOW = '2026-09-25T08:00:00.000Z';
 
-function makeRecord(id, erefNumber, policyNumber, policyholderName, status = 'REVIEW_REQUIRED') {
+function makeRecord(id, erefNumber, policyNumber, policyholderName, status = 'REVIEW_REQUIRED', docStatus = 'COMPLETED') {
   const sourceArchive = {
     id: randomUUID(), originalFilename: `${erefNumber}.zip`, contentType: 'application/zip',
     byteSize: ZIP.length, sha256: createHash('sha256').update(ZIP).digest('hex'),
@@ -39,7 +39,7 @@ function makeRecord(id, erefNumber, policyNumber, policyholderName, status = 'RE
         id: randomUUID(), originalFilename: 'sample-report.pdf', contentType: 'application/pdf',
         byteSize: PDF.length, sha256: createHash('sha256').update(PDF).digest('hex'),
       },
-      documentType: 'FA_PRUPLANNER_REPORT', processingStatus: 'COMPLETED',
+      documentType: 'FA_PRUPLANNER_REPORT', processingStatus: docStatus,
     }],
     archive: ZIP,
   };
@@ -106,6 +106,8 @@ export function createPosMockMiddleware(role = 'REVIEWER') {
     ['11111111-1111-4111-8111-111111111111', makeRecord('11111111-1111-4111-8111-111111111111', 'EREF-2026-001', 'P10001', 'Harper Lee', 'COMPLETED')],
     ['22222222-2222-4222-8222-222222222222', makeRecord('22222222-2222-4222-8222-222222222222', 'EREF-2026-002', 'P10002', 'Morgan Chen', 'PROCESSING')],
     ['33333333-3333-4333-8333-333333333333', makeRecord('33333333-3333-4333-8333-333333333333', 'EREF-2026-003', 'P10003', 'Delete conflict example')],
+    // REVIEW_REQUIRED with a PENDING document: exercises the 422 verification prerequisite path.
+    ['99999999-9999-4999-8999-999999999999', makeRecord('99999999-9999-4999-8999-999999999999', 'EREF-2026-009', 'P99999', 'Prereq Pending', 'REVIEW_REQUIRED', 'PENDING')],
   ]);
   const jobs = new Map();
   let signedOut = false;
@@ -220,6 +222,23 @@ export function createPosMockMiddleware(role = 'REVIEWER') {
             record.version += 1;
             record.updatedAt = new Date().toISOString();
           }
+          return json(res, 200, recordResponse(record));
+        }
+        if (subpath === 'verification' && method === 'POST') {
+          if (userRole !== 'REVIEWER') return problem(res, 403, 'FORBIDDEN', 'Reviewer role is required.');
+          if (!validCsrf(req)) return problem(res, 403, 'INVALID_CSRF_TOKEN', 'The CSRF token is missing or invalid.');
+          const body = await readJson(req);
+          if (!body || typeof body !== 'object' || Array.isArray(body) || !Number.isInteger(body.expectedVersion) || body.expectedVersion < 0) return problem(res, 400, 'INVALID_REQUEST', 'expectedVersion must be a nonnegative integer.');
+          if (record.status !== 'REVIEW_REQUIRED') return problem(res, 409, 'POS_RECORD_NOT_REVIEWABLE', 'This record cannot be verified in its current status.');
+          if (body.expectedVersion !== record.version) return problem(res, 412, 'POS_RECORD_VERSION_MISMATCH', 'This record has changed. Refresh and retry.');
+          if (!record.documents || record.documents.length === 0) return problem(res, 422, 'VERIFICATION_PREREQUISITES_UNMET', 'At least one document is required to verify.');
+          if (record.documents.some((doc) => doc.processingStatus === 'PENDING' || doc.processingStatus === 'PROCESSING')) return problem(res, 422, 'VERIFICATION_PREREQUISITES_UNMET', 'All documents must finish processing before verification.');
+          for (const key of ['erefNumber', 'policyNumber', 'policyholderName', 'consultantName']) {
+            if (!record[key]) return problem(res, 422, 'VERIFICATION_PREREQUISITES_UNMET', `${key} is required to verify.`);
+          }
+          record.status = 'COMPLETED';
+          record.version += 1;
+          record.updatedAt = new Date().toISOString();
           return json(res, 200, recordResponse(record));
         }
         if (subpath === 'documents' && method === 'GET') return json(res, 200, record.documents);

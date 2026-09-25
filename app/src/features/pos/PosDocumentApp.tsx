@@ -37,6 +37,12 @@ export default function PosDocumentApp() {
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loadError, setLoadError] = useState<ApiError | null>(null);
   const [selectedRecord, setSelectedRecord] = useState<PosRecordDetail | null>(null);
+  // Bumped after any mutation so the SearchPanel re-runs its last submitted search.
+  const [searchRefreshToken, setSearchRefreshToken] = useState(0);
+
+  const refreshSearch = useCallback(() => {
+    setSearchRefreshToken((token) => token + 1);
+  }, []);
 
   const isReviewer = user?.roles.includes("REVIEWER") ?? false;
 
@@ -102,6 +108,32 @@ export default function PosDocumentApp() {
     },
     [handleUnauthorized],
   );
+
+  /** Load record + documents when an ingestion job completes, and refresh search. */
+  const handleUploadCompleted = useCallback(
+    (posRecordId: string) => {
+      void loadRecordWithDocuments(posRecordId);
+      refreshSearch();
+    },
+    [loadRecordWithDocuments, refreshSearch],
+  );
+
+  /** Replace the selected record after an edit/verify and refresh search. */
+  const handleRecordUpdated = useCallback(
+    (record: PosRecordDetail) => {
+      setSelectedRecord((current) =>
+        current?.id === record.id ? { ...record, documents: current.documents } : current,
+      );
+      refreshSearch();
+    },
+    [refreshSearch],
+  );
+
+  /** Clear the selection after a delete and refresh search. */
+  const handleDeleted = useCallback(() => {
+    setSelectedRecord(null);
+    refreshSearch();
+  }, [refreshSearch]);
 
   if (authState === "LOADING") {
     return (
@@ -169,7 +201,7 @@ export default function PosDocumentApp() {
         <UploadPanel
           onUnauthorized={handleUnauthorized}
           onJobUpdate={() => {}}
-          onCompleted={loadRecordWithDocuments}
+          onCompleted={handleUploadCompleted}
         />
       ) : null}
 
@@ -177,6 +209,7 @@ export default function PosDocumentApp() {
         onUnauthorized={handleUnauthorized}
         onResults={() => {}}
         onSelectRecord={loadRecordWithDocuments}
+        refreshToken={searchRefreshToken}
       />
 
       {selectedRecord ? (
@@ -186,12 +219,8 @@ export default function PosDocumentApp() {
           documents={selectedRecord.documents}
           isReviewer={isReviewer}
           onUnauthorized={handleUnauthorized}
-          onRecordUpdated={(record) =>
-            setSelectedRecord((current) =>
-              current?.id === record.id ? { ...record, documents: current.documents } : current,
-            )
-          }
-          onDeleted={() => setSelectedRecord(null)}
+          onRecordUpdated={handleRecordUpdated}
+          onDeleted={handleDeleted}
           onReload={() => loadRecordWithDocuments(selectedRecord.id)}
         />
       ) : null}
