@@ -280,7 +280,7 @@ describe("search and detail", () => {
     expect(screen.queryByText(/Open PDF/)).not.toBeInTheDocument(); // USER cannot open PDFs
   });
 
-  it("shows only the filename on document rows (no status text)", async () => {
+  it("shows the filename and processing status on document rows", async () => {
     mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
     mockSearch.mockResolvedValue({ ok: true, results: searchPage });
     mockGetRecord.mockResolvedValue({ ok: true, record: { ...recordDetail, documents: [] } });
@@ -299,8 +299,7 @@ describe("search and detail", () => {
     await screen.findByText(/Search POS records/i);
     await userEvent.click(screen.getByRole("button", { name: "Search" }));
     await userEvent.click(await screen.findByRole("button", { name: /view details/i }));
-    expect(await screen.findByText("application.pdf")).toBeInTheDocument();
-    expect(screen.queryByText(/Processing status/i)).not.toBeInTheDocument();
+    expect(await screen.findByText("application.pdf | SKIPPED")).toBeInTheDocument();
   });
 
   it("REVIEWER sees Open PDF and Download original ZIP using relative URLs", async () => {

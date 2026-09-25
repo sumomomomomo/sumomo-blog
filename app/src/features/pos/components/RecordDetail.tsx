@@ -329,7 +329,9 @@ export default function RecordDetail({
               key={document.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded border border-stone-300 p-2 text-sm dark:border-slate-600"
             >
-              <span>{document.filename} | {document.processingStatus}</span>
+              <span>
+                {document.filename} | {document.processingStatus}
+              </span>
               {isReviewer ? (
                 <a
                   href={documentContentUrl(record.id, document.id)}
