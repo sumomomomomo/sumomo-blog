@@ -87,6 +87,7 @@ export default function PosDocumentApp() {
       const recordOutcome = await getRecord(posRecordId);
       if (!recordOutcome.ok) {
         if (recordOutcome.error.status === 401) handleUnauthorized();
+        if (recordOutcome.error.status === 404) setSelectedRecord(null);
         return;
       }
       const docsOutcome = await getRecordDocuments(posRecordId);
@@ -180,10 +181,18 @@ export default function PosDocumentApp() {
 
       {selectedRecord ? (
         <RecordDetail
+          key={selectedRecord.id}
           record={selectedRecord}
           documents={selectedRecord.documents}
           isReviewer={isReviewer}
           onUnauthorized={handleUnauthorized}
+          onRecordUpdated={(record) =>
+            setSelectedRecord((current) =>
+              current?.id === record.id ? { ...record, documents: current.documents } : current,
+            )
+          }
+          onDeleted={() => setSelectedRecord(null)}
+          onReload={() => loadRecordWithDocuments(selectedRecord.id)}
         />
       ) : null}
     </div>

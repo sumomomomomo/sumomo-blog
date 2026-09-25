@@ -198,6 +198,34 @@ export interface PosRecordDetail {
   documents: PosDocument[];
 }
 
+export type PosRecordChanges = Partial<
+  Pick<
+    PosRecordDetail,
+    "erefNumber" | "policyNumber" | "policyholderName" | "consultantName" | "policyCreateDate"
+  >
+>;
+
+export type PosRecordPatch = { expectedVersion: number } & PosRecordChanges;
+
+function parseRecordDetail(body: unknown, fallbackId: string): PosRecordDetail {
+  const record = (body ?? {}) as Record<string, unknown>;
+  const str = (key: string): string | null =>
+    typeof record[key] === "string" ? (record[key] as string) : null;
+  return {
+    id: typeof record.id === "string" ? record.id : fallbackId,
+    erefNumber: str("erefNumber"),
+    policyNumber: str("policyNumber"),
+    policyholderName: str("policyholderName"),
+    consultantName: str("consultantName"),
+    policyCreateDate: str("policyCreateDate"),
+    status: typeof record.status === "string" ? record.status : "",
+    uploadedAt: typeof record.uploadedAt === "string" ? record.uploadedAt : "",
+    updatedAt: typeof record.updatedAt === "string" ? record.updatedAt : "",
+    version: typeof record.version === "number" ? record.version : 0,
+    documents: [],
+  };
+}
+
 export function documentContentUrl(posRecordId: string, documentId: string): string {
   return `${API_BASE}/pos-records/${encodeURIComponent(posRecordId)}/documents/${encodeURIComponent(documentId)}/content`;
 }
@@ -214,24 +242,39 @@ export async function getRecord(
     if (!response.ok) {
       return { ok: false, error: await parseErrorResponse(response) };
     }
-    const body: unknown = await response.json();
-    const record = (body ?? {}) as Record<string, unknown>;
-    const str = (key: string): string | null =>
-      typeof record[key] === "string" ? (record[key] as string) : null;
-    const detail: PosRecordDetail = {
-      id: typeof record.id === "string" ? record.id : posRecordId,
-      erefNumber: str("erefNumber"),
-      policyNumber: str("policyNumber"),
-      policyholderName: str("policyholderName"),
-      consultantName: str("consultantName"),
-      policyCreateDate: str("policyCreateDate"),
-      status: typeof record.status === "string" ? record.status : "",
-      uploadedAt: typeof record.uploadedAt === "string" ? record.uploadedAt : "",
-      updatedAt: typeof record.updatedAt === "string" ? record.updatedAt : "",
-      version: typeof record.version === "number" ? record.version : 0,
-      documents: [],
-    };
-    return { ok: true, record: detail };
+    return { ok: true, record: parseRecordDetail(await response.json(), posRecordId) };
+  } catch {
+    return { ok: false, error: networkError() };
+  }
+}
+
+export async function updateRecord(
+  posRecordId: string,
+  patch: PosRecordPatch,
+): Promise<{ ok: true; record: PosRecordDetail } | { ok: false; error: ApiError }> {
+  try {
+    const response = await request(`/pos-records/${encodeURIComponent(posRecordId)}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/merge-patch+json", ...csrfHeaders() },
+      body: JSON.stringify(patch),
+    });
+    if (!response.ok) return { ok: false, error: await parseErrorResponse(response) };
+    return { ok: true, record: parseRecordDetail(await response.json(), posRecordId) };
+  } catch {
+    return { ok: false, error: networkError() };
+  }
+}
+
+export async function deleteRecord(
+  posRecordId: string,
+): Promise<{ ok: true } | { ok: false; error: ApiError }> {
+  try {
+    const response = await request(`/pos-records/${encodeURIComponent(posRecordId)}`, {
+      method: "DELETE",
+      headers: csrfHeaders(),
+    });
+    if (!response.ok) return { ok: false, error: await parseErrorResponse(response) };
+    return { ok: true };
   } catch {
     return { ok: false, error: networkError() };
   }
@@ -239,6 +282,7 @@ export async function getRecord(
 
 export interface PosDocument {
   id: string;
+  filename: string;
   documentType: string;
   processingStatus: string;
 }
@@ -257,6 +301,12 @@ export async function getRecordDocuments(
       const record = (item ?? {}) as Record<string, unknown>;
       return {
         id: typeof record.id === "string" ? record.id : "",
+        filename:
+          typeof record.storageObject === "object" &&
+          record.storageObject !== null &&
+          typeof (record.storageObject as Record<string, unknown>).originalFilename === "string"
+            ? (record.storageObject as Record<string, string>).originalFilename
+            : "",
         documentType: typeof record.documentType === "string" ? record.documentType : "",
         processingStatus:
           typeof record.processingStatus === "string" ? record.processingStatus : "",
