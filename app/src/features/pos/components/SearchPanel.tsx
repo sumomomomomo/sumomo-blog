@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import {
   type ApiError,
+  downloadSearchPage,
   MAX_STRING_LENGTHS,
   type PosRecordSummary,
+  type SearchCriteria,
   type SearchPage,
   searchRecords,
 } from "../api";
@@ -13,6 +15,7 @@ interface Props {
   onSelectRecord: (posRecordId: string) => void;
   /** Bumped by the parent after a mutation so the last submitted search re-runs. */
   refreshToken: number;
+  isReviewer: boolean;
 }
 
 function orNotAvailable(value: string | null | undefined): string {
@@ -94,33 +97,48 @@ export default function SearchPanel({
   onResults,
   onSelectRecord,
   refreshToken,
+  isReviewer,
 }: Props) {
   const [erefNumber, setErefNumber] = useState("");
   const [policyNumber, setPolicyNumber] = useState("");
   const [policyholderName, setPolicyholderName] = useState("");
+  const [consultantName, setConsultantName] = useState("");
   const [fuzzyName, setFuzzyName] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<ApiError | null>(null);
   const [results, setLocalResults] = useState<SearchPage | null>(null);
   const [searched, setSearched] = useState(false);
+  const [downloading, setDownloading] = useState(false);
+  const [downloadError, setDownloadError] = useState<ApiError | null>(null);
 
   // Request-sequence guard: only the newest search response is applied.
   const searchSeq = useRef(0);
   const lastPage = useRef(0);
   const hasSearched = useRef(false);
   const firstRefresh = useRef(true);
+  const submitted = useRef<SearchCriteria | null>(null);
 
-  const runSearch = async (targetPage: number) => {
+  const runSearch = async (targetPage: number, useSubmitted = false) => {
+    const criteria =
+      useSubmitted && submitted.current
+        ? submitted.current
+        : {
+            erefNumber: erefNumber.trim() || undefined,
+            policyNumber: policyNumber.trim() || undefined,
+            policyholderName: policyholderName.trim() || undefined,
+            consultantName: consultantName.trim() || undefined,
+            fuzzyName,
+          };
+    submitted.current = criteria;
     const seq = ++searchSeq.current;
     lastPage.current = targetPage;
     hasSearched.current = true;
     setLoading(true);
     setError(null);
+    setDownloadError(null);
+    setLocalResults(null);
     const outcome = await searchRecords({
-      erefNumber: erefNumber.trim() || undefined,
-      policyNumber: policyNumber.trim() || undefined,
-      policyholderName: policyholderName.trim() || undefined,
-      fuzzyName: fuzzyName || undefined,
+      ...criteria,
       page: targetPage,
     });
     // Drop stale responses: a newer search has since been requested.
@@ -134,7 +152,7 @@ export default function SearchPanel({
       if (page.items.length === 0 && page.totalElements > 0 && targetPage > 0) {
         const lastValid = Math.max(0, Math.ceil(page.totalElements / page.size) - 1);
         if (lastValid !== targetPage) {
-          void runSearch(lastValid);
+          void runSearch(lastValid, true);
           return;
         }
       }
@@ -160,7 +178,7 @@ export default function SearchPanel({
       return;
     }
     if (hasSearched.current) {
-      void runSearchRef.current(lastPage.current);
+      void runSearchRef.current(lastPage.current, true);
     }
   }, [refreshToken]);
 
@@ -168,11 +186,37 @@ export default function SearchPanel({
     setErefNumber("");
     setPolicyNumber("");
     setPolicyholderName("");
+    setConsultantName("");
     setFuzzyName(false);
     setLocalResults(null);
     onResults(null);
     setError(null);
     setSearched(false);
+    setDownloadError(null);
+    submitted.current = null;
+    hasSearched.current = false;
+    searchSeq.current += 1;
+  };
+
+  const handleDownload = async () => {
+    if (!results?.items.length || loading || downloading) return;
+    setDownloading(true);
+    setDownloadError(null);
+    const outcome = await downloadSearchPage(results.items.map((item) => item.id));
+    setDownloading(false);
+    if (!outcome.ok) {
+      if (outcome.error.status === 401) onUnauthorized();
+      else setDownloadError(outcome.error);
+      return;
+    }
+    const url = URL.createObjectURL(outcome.blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = "pos-search-page.zip";
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
 
   const totalPages = results?.totalPages ?? 0;
@@ -228,6 +272,19 @@ export default function SearchPanel({
             />
           </div>
         </div>
+        <div>
+          <label htmlFor="pos-search-consultant" className="block text-sm font-medium">
+            Search consultant
+          </label>
+          <input
+            id="pos-search-consultant"
+            type="text"
+            maxLength={MAX_STRING_LENGTHS.consultantName}
+            value={consultantName}
+            onChange={(event) => setConsultantName(event.target.value)}
+            className="mt-1 w-full rounded border border-stone-300 bg-transparent p-2 text-sm dark:border-slate-600"
+          />
+        </div>
         <div className="flex flex-wrap items-center gap-4">
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -266,11 +323,27 @@ export default function SearchPanel({
             {error.detail ? <p>{error.detail}</p> : null}
           </div>
         ) : null}
+        {downloadError ? (
+          <div role="alert" className="rounded border border-red-400 p-3 text-sm">
+            <p className="font-semibold">Download failed: {downloadError.title}</p>
+            {downloadError.detail ? <p>{downloadError.detail}</p> : null}
+          </div>
+        ) : null}
         {!loading && !error && searched && results && results.items.length === 0 ? (
           <p>No matching records found.</p>
         ) : null}
         {results && results.items.length > 0 ? (
           <>
+            {isReviewer ? (
+              <button
+                type="button"
+                disabled={loading || downloading}
+                onClick={() => void handleDownload()}
+                className="mb-3 rounded bg-blue-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+              >
+                {downloading ? "Preparing download…" : "Download all"}
+              </button>
+            ) : null}
             <p className="mb-2 text-sm">
               {results.totalElements} result{results.totalElements === 1 ? "" : "s"} · page{" "}
               {results.page + 1} of {Math.max(totalPages, 1)}
@@ -288,7 +361,7 @@ export default function SearchPanel({
                 type="button"
                 disabled={results.page <= 0 || loading}
                 className="rounded border border-stone-400 px-3 py-1 text-sm disabled:opacity-50"
-                onClick={() => void runSearch(results.page - 1)}
+                onClick={() => void runSearch(results.page - 1, true)}
               >
                 Previous
               </button>
@@ -304,7 +377,7 @@ export default function SearchPanel({
                     disabled={loading || item.page === results.page}
                     aria-current={item.page === results.page ? "page" : undefined}
                     className="rounded border border-stone-400 px-3 py-1 text-sm disabled:opacity-50"
-                    onClick={() => void runSearch(item.page)}
+                    onClick={() => void runSearch(item.page, true)}
                   >
                     {item.page + 1}
                   </button>
@@ -314,7 +387,7 @@ export default function SearchPanel({
                 type="button"
                 disabled={results.page >= totalPages - 1 || loading}
                 className="rounded border border-stone-400 px-3 py-1 text-sm disabled:opacity-50"
-                onClick={() => void runSearch(results.page + 1)}
+                onClick={() => void runSearch(results.page + 1, true)}
               >
                 Next
               </button>

@@ -206,6 +206,7 @@ export default function PosDocumentApp() {
       ) : null}
 
       <SearchPanel
+        isReviewer={isReviewer}
         onUnauthorized={handleUnauthorized}
         onResults={() => {}}
         onSelectRecord={loadRecordWithDocuments}

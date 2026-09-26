@@ -20,6 +20,7 @@ vi.mock("./api", async (importOriginal) => {
     getCurrentUser: vi.fn(),
     logout: vi.fn(),
     searchRecords: vi.fn(),
+    downloadSearchPage: vi.fn(),
     getRecord: vi.fn(),
     getRecordDocuments: vi.fn(),
     updateRecord: vi.fn(),
@@ -33,6 +34,7 @@ vi.mock("./api", async (importOriginal) => {
 const mockCurrentUser = vi.mocked(api.getCurrentUser);
 const mockLogout = vi.mocked(api.logout);
 const mockSearch = vi.mocked(api.searchRecords);
+const mockDownload = vi.mocked(api.downloadSearchPage);
 const mockGetRecord = vi.mocked(api.getRecord);
 const mockGetDocuments = vi.mocked(api.getRecordDocuments);
 const mockUpdateRecord = vi.mocked(api.updateRecord);
@@ -147,6 +149,121 @@ describe("roles", () => {
     mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
     render(<PosDocumentApp />);
     expect(await screen.findByText(/Upload POS archive/i)).toBeInTheDocument();
+  });
+});
+
+describe("search page download", () => {
+  it("uses consultant and exact matching, retaining submitted criteria during paging", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValue({
+      ok: true,
+      results: { ...searchPage, totalPages: 2, totalElements: 21 },
+    });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Roles: USER, REVIEWER/);
+    await userEvent.type(screen.getByLabelText("Search consultant"), "Avery Tan");
+    await userEvent.click(screen.getByRole("button", { name: /^Search$/ }));
+    await waitFor(() =>
+      expect(mockSearch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          consultantName: "Avery Tan",
+          fuzzyName: false,
+          page: 0,
+        }),
+      ),
+    );
+    await userEvent.clear(screen.getByLabelText("Search consultant"));
+    await userEvent.type(screen.getByLabelText("Search consultant"), "unsent edit");
+    await userEvent.click(screen.getByRole("button", { name: "Next" }));
+    await waitFor(() =>
+      expect(mockSearch).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          consultantName: "Avery Tan",
+          fuzzyName: false,
+          page: 1,
+        }),
+      ),
+    );
+  });
+
+  it("offers settled reviewer page IDs and reports archive errors", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+    mockDownload.mockResolvedValue({
+      ok: false,
+      error: {
+        status: 409,
+        code: "PAGE_CHANGED",
+        title: "Conflict",
+        detail: "A displayed record is no longer available.",
+      },
+    });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Roles: USER, REVIEWER/);
+    expect(screen.queryByRole("button", { name: "Download all" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /^Search$/ }));
+    await userEvent.click(await screen.findByRole("button", { name: "Download all" }));
+    expect(mockDownload).toHaveBeenCalledWith([searchPage.items[0].id]);
+    expect(await screen.findByText(/displayed record is no longer available/i)).toBeInTheDocument();
+  });
+
+  it("hides bulk action for USER and empty pages", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: signedInUser });
+    mockSearch.mockResolvedValue({ ok: true, results: searchPage });
+    const view = render(<PosDocumentApp />);
+    await screen.findByText(/Roles: USER/);
+    await userEvent.click(screen.getByRole("button", { name: /^Search$/ }));
+    await screen.findByText("EREF-2026-00123");
+    expect(screen.queryByRole("button", { name: "Download all" })).not.toBeInTheDocument();
+    view.unmount();
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValue({
+      ok: true,
+      results: { ...searchPage, items: [], totalElements: 0, totalPages: 0 },
+    });
+    render(<PosDocumentApp />);
+    await screen.findByText(/Roles: USER, REVIEWER/);
+    await userEvent.click(screen.getByRole("button", { name: /^Search$/ }));
+    await screen.findByText(/No matching records/);
+    expect(screen.queryByRole("button", { name: "Download all" })).not.toBeInTheDocument();
+  });
+
+  it("saves a completed ZIP and hides the action while a new search is pending", async () => {
+    mockCurrentUser.mockResolvedValue({ ok: true, user: reviewer });
+    mockSearch.mockResolvedValueOnce({ ok: true, results: searchPage });
+    let completeSearch: (result: SearchResult) => void = () => {};
+    mockSearch.mockImplementationOnce(
+      () =>
+        new Promise<SearchResult>((resolve) => {
+          completeSearch = resolve;
+        }),
+    );
+    const blob = new Blob(["ZIP"], { type: "application/zip" });
+    mockDownload.mockResolvedValue({ ok: true, blob });
+    const createObjectURL = vi.fn(() => "blob:test-download");
+    const revokeObjectURL = vi.fn();
+    Object.defineProperty(URL, "createObjectURL", { configurable: true, value: createObjectURL });
+    Object.defineProperty(URL, "revokeObjectURL", { configurable: true, value: revokeObjectURL });
+    const click = vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(function (
+      this: HTMLAnchorElement,
+    ) {
+      expect(this.download).toBe("pos-search-page.zip");
+      expect(this.href).toBe("blob:test-download");
+    });
+    try {
+      render(<PosDocumentApp />);
+      await screen.findByText(/Roles: USER, REVIEWER/);
+      await userEvent.click(screen.getByRole("button", { name: /^Search$/ }));
+      await userEvent.click(await screen.findByRole("button", { name: "Download all" }));
+      await waitFor(() => expect(click).toHaveBeenCalledOnce());
+      expect(createObjectURL).toHaveBeenCalledWith(blob);
+      await userEvent.click(screen.getByRole("button", { name: /^Search$/ }));
+      expect(screen.queryByRole("button", { name: "Download all" })).not.toBeInTheDocument();
+      completeSearch({ ok: true, results: searchPage });
+      expect(await screen.findByRole("button", { name: "Download all" })).toBeInTheDocument();
+    } finally {
+      click.mockRestore();
+    }
   });
 });
 
