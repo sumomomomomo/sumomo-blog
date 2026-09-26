@@ -49,6 +49,71 @@ afterEach(async () => {
 });
 
 describe("local POS mock API", () => {
+  it("filters consultant and policyholder together and returns ordered page PDF ZIP", async () => {
+    await start();
+    const exact = await (
+      await call("/pos-records/search", "POST", {
+        consultantName: "AVERY   TAN",
+        policyholderName: "Harper Lee",
+        fuzzyName: false,
+      })
+    ).json();
+    expect(exact.items.map((item: { id: string }) => item.id)).toEqual([id1]);
+    const wrong = await (
+      await call("/pos-records/search", "POST", {
+        consultantName: "Avery Tanx",
+        policyholderName: "Harper Lee",
+        fuzzyName: false,
+      })
+    ).json();
+    expect(wrong.totalElements).toBe(0);
+    const fuzzy = await (
+      await call("/pos-records/search", "POST", {
+        consultantName: "Avery Tann",
+        policyholderName: "Harper Lea",
+        fuzzyName: true,
+      })
+    ).json();
+    expect(fuzzy.items.map((item: { id: string }) => item.id)).toEqual([id1]);
+    const strict = await (
+      await call("/pos-records/search", "POST", {
+        consultantName: "Avery Tann",
+        policyholderName: "Harper Lea",
+        fuzzyName: true,
+        minimumNameSimilarity: 0.99,
+      })
+    ).json();
+    expect(strict.totalElements).toBe(0);
+    const response = await call("/pos-records/search-page-archive", "POST", [id2, id1]);
+    expect(response.status).toBe(200);
+    const archive = Buffer.from(await response.arrayBuffer());
+    const names: string[] = [];
+    for (let offset = 0; offset < archive.length && archive.readUInt32LE(offset) === 0x04034b50; ) {
+      const size = archive.readUInt32LE(offset + 18);
+      const nameLength = archive.readUInt16LE(offset + 26);
+      const name = archive.subarray(offset + 30, offset + 30 + nameLength).toString();
+      names.push(name);
+      offset += 30 + nameLength + size;
+    }
+    expect(names).toEqual([
+      "EREF-2026-002/",
+      "EREF-2026-002/sample-report.pdf",
+      "EREF-2026-001/",
+      "EREF-2026-001/sample-report.pdf",
+    ]);
+    expect((await call("/pos-records/search-page-archive", "POST", [id1, id1])).status).toBe(400);
+    expect((await call("/pos-records/search-page-archive", "POST", ["not-a-uuid"])).status).toBe(
+      400,
+    );
+    expect(
+      (
+        await call("/pos-records/search-page-archive", "POST", [
+          "00000000-0000-4000-8000-000000000000",
+        ])
+      ).status,
+    ).toBe(409);
+    expect((await call("/pos-records/search-page-archive", "POST", [id1], false)).status).toBe(403);
+  });
   it("serves reviewer search, details, documents, and working downloads", async () => {
     const user = await start();
     expect(user.roles).toEqual(["REVIEWER"]);

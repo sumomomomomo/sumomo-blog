@@ -101,6 +101,58 @@ function nameSimilarity(left, right) {
   return 2 * [...first].filter((gram) => second.has(gram)).length / (first.size + second.size);
 }
 
+function zipEntries(entries) {
+  const locals = [];
+  const central = [];
+  let offset = 0;
+  const crc32 = (data) => {
+    let crc = 0xffffffff;
+    for (const byte of data) {
+      crc ^= byte;
+      for (let bit = 0; bit < 8; bit += 1) crc = (crc >>> 1) ^ (crc & 1 ? 0xedb88320 : 0);
+    }
+    return (crc ^ 0xffffffff) >>> 0;
+  };
+  for (const [filename, data] of entries) {
+    const name = Buffer.from(filename);
+    const crc = crc32(data);
+    const local = Buffer.alloc(30);
+    local.writeUInt32LE(0x04034b50, 0);
+    local.writeUInt16LE(20, 4);
+    local.writeUInt16LE(0x0800, 6);
+    local.writeUInt32LE(crc, 14);
+    local.writeUInt32LE(data.length, 18);
+    local.writeUInt32LE(data.length, 22);
+    local.writeUInt16LE(name.length, 26);
+    locals.push(local, name, data);
+    const directory = Buffer.alloc(46);
+    directory.writeUInt32LE(0x02014b50, 0);
+    directory.writeUInt16LE(20, 4);
+    directory.writeUInt16LE(20, 6);
+    directory.writeUInt16LE(0x0800, 8);
+    directory.writeUInt32LE(crc, 16);
+    directory.writeUInt32LE(data.length, 20);
+    directory.writeUInt32LE(data.length, 24);
+    directory.writeUInt16LE(name.length, 28);
+    directory.writeUInt32LE(offset, 42);
+    central.push(directory, name);
+    offset += local.length + name.length + data.length;
+  }
+  const directorySize = central.reduce((sum, part) => sum + part.length, 0);
+  const end = Buffer.alloc(22);
+  end.writeUInt32LE(0x06054b50, 0);
+  end.writeUInt16LE(entries.length, 8);
+  end.writeUInt16LE(entries.length, 10);
+  end.writeUInt32LE(directorySize, 12);
+  end.writeUInt32LE(offset, 16);
+  return Buffer.concat([...locals, ...central, end]);
+}
+
+function safeZipName(name) {
+  const clean = (name ?? '').replace(/[<>:"|?*\\/\x00-\x1f\x7f]/g, '_').replace(/\.\./g, '_').trim().replace(/[. ]+$/g, '');
+  return /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])(?:\..*)?$/i.test(clean) ? `_${clean}` : clean;
+}
+
 export function createPosMockMiddleware(role = 'REVIEWER') {
   const records = new Map([
     ['11111111-1111-4111-8111-111111111111', makeRecord('11111111-1111-4111-8111-111111111111', 'EREF-2026-001', 'P10001', 'Harper Lee', 'COMPLETED')],
@@ -144,14 +196,47 @@ export function createPosMockMiddleware(role = 'REVIEWER') {
         if (!query || typeof query !== 'object' || Array.isArray(query)) return problem(res, 400, 'INVALID_REQUEST', 'A JSON search object is required.');
         const page = query.page ?? 0;
         if (!Number.isInteger(page) || page < 0) return problem(res, 400, 'INVALID_PAGE', 'Page must be a nonnegative integer.');
+        const threshold = query.minimumNameSimilarity ?? 0.3;
+        if (typeof threshold !== 'number' || !Number.isFinite(threshold) || threshold < 0 || threshold > 1) return problem(res, 400, 'INVALID_REQUEST', 'Name similarity threshold must be between 0 and 1.');
         const matched = [...records.values()].filter((item) =>
           (!query.erefNumber || normalizedIdentifier(item.erefNumber) === normalizedIdentifier(query.erefNumber)) &&
           (!query.policyNumber || normalizedIdentifier(item.policyNumber) === normalizedIdentifier(query.policyNumber)) &&
           (!query.policyholderName || (query.fuzzyName !== false
-            ? nameSimilarity(normalizedName(item.policyholderName), normalizedName(query.policyholderName)) >= 0.3
-            : normalizedName(item.policyholderName) === normalizedName(query.policyholderName))));
+            ? nameSimilarity(normalizedName(item.policyholderName), normalizedName(query.policyholderName)) >= threshold
+            : normalizedName(item.policyholderName) === normalizedName(query.policyholderName))) &&
+          (!query.consultantName || (query.fuzzyName !== false
+            ? nameSimilarity(normalizedName(item.consultantName), normalizedName(query.consultantName)) >= threshold
+            : normalizedName(item.consultantName) === normalizedName(query.consultantName))));
         const size = 20;
         return json(res, 200, { items: matched.slice(page * size, (page + 1) * size).map(({ documents, archive, sourceArchive, uploadedBy, version, ...summary }) => summary), page, size, totalElements: matched.length, totalPages: Math.ceil(matched.length / size) });
+      }
+      if (path === '/pos-records/search-page-archive' && method === 'POST') {
+        if (userRole !== 'REVIEWER') return problem(res, 403, 'FORBIDDEN', 'Reviewer role is required.');
+        if (!validCsrf(req)) return problem(res, 403, 'INVALID_CSRF_TOKEN', 'The CSRF token is missing or invalid.');
+        const ids = await readJson(req);
+        if (!Array.isArray(ids) || ids.length < 1 || ids.length > 20 || new Set(ids).size !== ids.length || ids.some((id) => typeof id !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id))) return problem(res, 400, 'INVALID_REQUEST', 'Select 1 to 20 unique records.');
+        const entries = [];
+        const folders = new Set();
+        for (const id of ids) {
+          const record = records.get(id);
+          if (!record) return problem(res, 409, 'PAGE_CHANGED', 'A displayed record is no longer available.');
+          if (!record.erefNumber?.trim()) return problem(res, 409, 'MISSING_EREF', 'A displayed record has no eRef.');
+          let folder = safeZipName(record.erefNumber);
+          if (!folder) return problem(res, 409, 'MISSING_EREF', 'A displayed record has no usable eRef.');
+          for (let n = 2; folders.has(folder.toLowerCase()); n += 1) folder = `${safeZipName(record.erefNumber)}-${n}`;
+          folders.add(folder.toLowerCase());
+          entries.push([`${folder}/`, Buffer.alloc(0)]);
+          const names = new Set();
+          for (const document of record.documents) {
+            const safe = safeZipName(document.storageObject.originalFilename) || 'document';
+            const raw = /\.pdf$/i.test(safe) ? safe : `${safe}.pdf`;
+            let name = raw;
+            for (let n = 2; names.has(name.toLowerCase()); n += 1) name = `${raw.replace(/\.pdf$/i, '')}-${n}.pdf`;
+            names.add(name.toLowerCase());
+            entries.push([`${folder}/${name}`, PDF]);
+          }
+        }
+        return bytes(res, 'application/zip', 'pos-search-page.zip', zipEntries(entries));
       }
       if (path === '/pos-records' && method === 'POST') {
         if (userRole !== 'REVIEWER') return problem(res, 403, 'FORBIDDEN', 'Reviewer role is required.');

@@ -40,6 +40,7 @@ const MAX_STRING_LENGTHS = {
   policyNumber: 256,
   erefNumber: 256,
   policyholderName: 256,
+  consultantName: 256,
 };
 
 /** Parse any error response (including application/problem+json) into a safe UI error. */
@@ -121,6 +122,7 @@ export interface SearchCriteria {
   erefNumber?: string;
   policyNumber?: string;
   policyholderName?: string;
+  consultantName?: string;
   fuzzyName?: boolean;
   page?: number;
 }
@@ -152,7 +154,8 @@ export async function searchRecords(
   if (criteria.erefNumber) payload.erefNumber = criteria.erefNumber;
   if (criteria.policyNumber) payload.policyNumber = criteria.policyNumber;
   if (criteria.policyholderName) payload.policyholderName = criteria.policyholderName;
-  if (criteria.fuzzyName) payload.fuzzyName = true;
+  if (criteria.consultantName) payload.consultantName = criteria.consultantName;
+  payload.fuzzyName = criteria.fuzzyName ?? false;
   if (typeof criteria.page === "number") payload.page = criteria.page;
   try {
     const response = await request("/pos-records/search", {
@@ -177,6 +180,22 @@ export async function searchRecords(
         totalPages: typeof record.totalPages === "number" ? record.totalPages : 0,
       },
     };
+  } catch {
+    return { ok: false, error: networkError() };
+  }
+}
+
+export async function downloadSearchPage(
+  ids: string[],
+): Promise<{ ok: true; blob: Blob } | { ok: false; error: ApiError }> {
+  try {
+    const response = await request("/pos-records/search-page-archive", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...csrfHeaders() },
+      body: JSON.stringify(ids),
+    });
+    if (!response.ok) return { ok: false, error: await parseErrorResponse(response) };
+    return { ok: true, blob: await response.blob() };
   } catch {
     return { ok: false, error: networkError() };
   }
