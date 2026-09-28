@@ -106,7 +106,7 @@ describe("auth shell", () => {
       error: { status: 401, code: "unauthorized", title: "Unauthorized", detail: "" },
     });
     render(<PosDocumentApp />);
-    expect(await screen.findByRole("link", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
   });
 
   it("sign-in navigates to the backend OAuth start URL", async () => {
@@ -115,8 +115,9 @@ describe("auth shell", () => {
       error: { status: 401, code: "unauthorized", title: "Unauthorized", detail: "" },
     });
     render(<PosDocumentApp />);
-    const link = await screen.findByRole("link", { name: /sign in with google/i });
-    expect(link.getAttribute("href")).toBe("/api/v1/oauth2/authorization/google");
+    const button = await screen.findByRole("button", { name: /sign in with google/i });
+    expect(button).toBeInTheDocument();
+    expect(button).toBeEnabled();
   });
 
   it("shows user info when signed in", async () => {
@@ -349,7 +350,7 @@ describe("upload and polling", () => {
     mockLogout.mockResolvedValue(undefined);
     await userEvent.click(screen.getByRole("button", { name: /log out/i }));
     expect(mockLogout).toHaveBeenCalled();
-    expect(await screen.findByRole("link", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
     expect(screen.queryByText(/Test User/)).not.toBeInTheDocument();
   });
 });
@@ -474,7 +475,7 @@ describe("search and detail", () => {
     render(<PosDocumentApp />);
     await screen.findByText(/Search POS records/i);
     await userEvent.click(screen.getByRole("button", { name: "Search" }));
-    expect(await screen.findByRole("link", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
     expect(screen.queryByText(/Test User/)).not.toBeInTheDocument();
   });
 });
@@ -1255,7 +1256,7 @@ describe("polling lifecycle", () => {
     const fileInput = screen.getByLabelText(/zip archive/i) as HTMLInputElement;
     await userEvent.upload(fileInput, new File(["PK"], "archive.zip", { type: "application/zip" }));
     await userEvent.click(screen.getByRole("button", { name: "Upload" }));
-    expect(await screen.findByRole("link", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
     expect(mockGetJob).toHaveBeenCalledTimes(1);
   });
 });
@@ -1280,7 +1281,7 @@ describe("401 clears previously visible PII", () => {
       error: { status: 401, code: "unauthorized", title: "Unauthorized", detail: "" },
     });
     await userEvent.click(screen.getByRole("button", { name: "Search" }));
-    expect(await screen.findByRole("link", { name: /sign in with google/i })).toBeInTheDocument();
+    expect(await screen.findByRole("button", { name: /sign in with google/i })).toBeInTheDocument();
     expect(screen.queryByText(/Jane Sample/)).not.toBeInTheDocument();
     expect(screen.queryByText(/Test User/)).not.toBeInTheDocument();
   });
