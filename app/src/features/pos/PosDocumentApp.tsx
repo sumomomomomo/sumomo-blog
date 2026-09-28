@@ -32,6 +32,33 @@ function ErrorBanner({ error }: { error: ApiError }) {
   );
 }
 
+/**
+ * Sign-in button that disables itself after the first click to prevent a
+ * double-click race: two rapid requests to /oauth2/authorization/google
+ * overwrite the OAuth2 state in the session, causing the callback to fail
+ * because the browser follows the first redirect (with the now-stale state).
+ */
+function SignInButton() {
+  const [clicked, setClicked] = useState(false);
+
+  const handleClick = () => {
+    if (clicked) return;
+    setClicked(true);
+    window.location.href = SIGN_IN_URL;
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleClick}
+      disabled={clicked}
+      className="inline-block rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-500 disabled:opacity-60 disabled:cursor-wait"
+    >
+      {clicked ? "Redirecting…" : "Sign in with Google"}
+    </button>
+  );
+}
+
 export default function PosDocumentApp() {
   const [authState, setAuthState] = useState<AuthState>("LOADING");
   const [user, setUser] = useState<CurrentUser | null>(null);
@@ -190,12 +217,7 @@ export default function PosDocumentApp() {
         ) : (
           <p className="mb-4">Sign in to view and process POS documents.</p>
         )}
-        <a
-          href={SIGN_IN_URL}
-          className="inline-block rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-500"
-        >
-          Sign in with Google
-        </a>
+        <SignInButton />
       </section>
     );
   }
