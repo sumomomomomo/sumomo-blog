@@ -36,9 +36,22 @@ export default function PosDocumentApp() {
   const [authState, setAuthState] = useState<AuthState>("LOADING");
   const [user, setUser] = useState<CurrentUser | null>(null);
   const [loadError, setLoadError] = useState<ApiError | null>(null);
+  const [loginFailed, setLoginFailed] = useState(false);
   const [selectedRecord, setSelectedRecord] = useState<PosRecordDetail | null>(null);
   // Bumped after any mutation so the SearchPanel re-runs its last submitted search.
   const [searchRefreshToken, setSearchRefreshToken] = useState(0);
+
+  // Detect OAuth login failure redirect from the backend.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("error") === "login_failed") {
+      setLoginFailed(true);
+      // Clean the URL so a refresh doesn't re-show the error.
+      const url = new URL(window.location.href);
+      url.searchParams.delete("error");
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
 
   const refreshSearch = useCallback(() => {
     setSearchRefreshToken((token) => token + 1);
@@ -73,6 +86,7 @@ export default function PosDocumentApp() {
     setUser(null);
     setSelectedRecord(null);
     setLoadError(null);
+    setLoginFailed(false);
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -165,7 +179,17 @@ export default function PosDocumentApp() {
     return (
       <section className="rounded border border-stone-300 bg-white p-6 dark:bg-slate-800">
         <h1 className="mb-2 text-xl font-semibold">POS document portal</h1>
-        <p className="mb-4">Sign in to view and process POS documents.</p>
+        {loginFailed ? (
+          <div
+            role="alert"
+            className="mb-4 rounded border border-amber-400 bg-amber-50 p-3 text-sm dark:border-amber-600 dark:bg-amber-950"
+          >
+            <p className="font-semibold">Sign-in failed</p>
+            <p>Something went wrong during sign-in. Please try again.</p>
+          </div>
+        ) : (
+          <p className="mb-4">Sign in to view and process POS documents.</p>
+        )}
         <a
           href={SIGN_IN_URL}
           className="inline-block rounded bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-500"
